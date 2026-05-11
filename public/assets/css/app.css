@@ -1,0 +1,178 @@
+/* public/assets/css/app.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    --sidebar-width: 260px;
+    --sidebar-bg: #0f172a;
+    --sidebar-hover: #1e293b;
+    --sidebar-active: #3b82f6;
+    --primary-color: #0f172a;
+    --secondary-color: #3b82f6;
+    --accent-color: #10b981;
+    --bg-color: #f8fafc;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-color);
+    color: #334155;
+    min-height: 100vh;
+    display: flex;
+    margin: 0;
+}
+
+/* Sidebar Styling */
+.sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--sidebar-bg);
+    color: #fff;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    transition: all 0.3s ease;
+    box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+}
+
+.sidebar-brand {
+    padding: 1.5rem;
+    font-weight: 700;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    text-decoration: none;
+    color: #fff !important;
+}
+
+.sidebar-nav {
+    padding: 1.5rem 0.75rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.sidebar-link:hover {
+    background-color: var(--sidebar-hover);
+    color: #fff;
+}
+
+.sidebar-link.active {
+    background-color: var(--sidebar-active);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.sidebar-link i {
+    font-size: 1.2rem;
+}
+
+/* Main Content */
+.main-content {
+    margin-left: var(--sidebar-width);
+    flex-grow: 1;
+    padding: 2rem;
+    width: calc(100% - var(--sidebar-width));
+}
+
+.sidebar-toggler {
+    display: none;
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1100;
+    background: var(--sidebar-bg);
+    color: #fff;
+    border: none;
+    padding: 0.5rem;
+    border-radius: 6px;
+}
+
+@media (max-width: 991px) {
+    .sidebar {
+        left: calc(-1 * var(--sidebar-width));
+    }
+    .sidebar.show {
+        left: 0;
+    }
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+        padding-top: 4rem;
+    }
+    .sidebar-toggler {
+        display: block;
+    }
+}
+
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    padding: 0.6rem 1rem;
+    transition: all 0.2s;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.btn {
+    border-radius: 8px;
+    font-weight: 600;
+    padding: 0.5rem 1.2rem;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+.btn-primary:hover {
+    background-color: #2563eb;
+    border-color: #2563eb;
+    transform: translateY(-1px);
+}
+
+.toast-container { z-index: 1060; }
+.fade-in { animation: fadeIn 0.4s ease-in; }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Tom select customization */
+.ts-control {
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    padding: 0.6rem 1rem;
+}
