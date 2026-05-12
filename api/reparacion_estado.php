@@ -2,7 +2,9 @@
 // api/reparacion_estado.php
 require_once __DIR__ . '/../app/config.php';
 require_once __DIR__ . '/../app/auth.php';
+require_once __DIR__ . '/../app/csrf.php';
 require_once __DIR__ . '/../app/db.php';
+require_once __DIR__ . '/../app/estado.php';
 require_once __DIR__ . '/../app/historial.php';
 
 requireLogin();
@@ -33,27 +35,55 @@ if (!$id || !$nuevoEstado) {
 }
 
 $pdo = getDbConnection();
-$stmt = $pdo->prepare("SELECT estado, observaciones FROM reparaciones WHERE id = ?");
+$stmt = $pdo->prepare("SELECT estado, observaciones, tecnico_id FROM reparaciones WHERE id = ?");
 $stmt->execute([$id]);
 $rep = $stmt->fetch();
 
 if (!$rep) {
     http_response_code(404);
+    echo json_encode(['error' => 'No encontrado']);
+    exit;
+}
+
+$userRole = $_SESSION['user_role'] ?? '';
+$tecnicoId = $_SESSION['tecnico_id'] ?? null;
+$canManage = $userRole === 'admin' || ($userRole === 'tecnico' && $rep['tecnico_id'] && (int)$rep['tecnico_id'] === (int)$tecnicoId);
+
+if (!$canManage) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Acción no autorizada']);
     exit;
 }
 
 $estadoAnterior = $rep['estado'];
+$nuevoEstadoNormalizado = normalizeEstadoLabel($nuevoEstado);
+
+if (!canTransitionEstado($estadoAnterior, $nuevoEstado, $userRole)) {
+    http_response_code(422);
+    echo json_encode(['error' => 'Transición de estado no permitida']);
+    exit;
+}
+
+if (estadoTransitionRequiresComment($estadoAnterior, $nuevoEstado) && $comentario === '') {
+    http_response_code(400);
+    echo json_encode(['error' => 'Debe ingresar un comentario para ese cambio de estado']);
+    exit;
+}
 
 // Logica de fechas
 $updateFields = ["estado = ?"];
 $params = [$nuevoEstado];
 
-if ($nuevoEstado === 'EN REPARACION') {
+if (isEstadoEnReparacion($nuevoEstado)) {
     $updateFields[] = "fecha_en_reparacion = COALESCE(fecha_en_reparacion, NOW())";
-} elseif ($nuevoEstado === 'REPARADO') {
+} elseif (isEstadoReparado($nuevoEstado)) {
     $updateFields[] = "fecha_reparado = NOW()";
-} elseif ($nuevoEstado === 'SIN REPARACION') {
+} elseif (isEstadoSinReparacion($nuevoEstado)) {
     $updateFields[] = "fecha_sin_reparacion = NOW()";
+} elseif (isEstadoPendienteIntermedio($nuevoEstado) || $nuevoEstadoNormalizado === 'ENTREGADO') {
+    $updateFields[] = "fecha_pendiente = COALESCE(fecha_pendiente, NOW())";
+} elseif ($nuevoEstadoNormalizado === 'PEND. DE REVISION' && normalizeEstadoLabel($estadoAnterior) !== 'PEND. DE REVISION') {
+    $updateFields[] = "fecha_pendiente = NOW()";
 }
 
 // Logica observaciones

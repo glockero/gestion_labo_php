@@ -14,13 +14,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     requireCsrf();
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
     
     if (empty($username) || empty($password)) {
         setFlashMessage('danger', 'Ingrese usuario y contraseña.');
     } else {
-        if (login($username, $password)) {
+        [$allowed, $rateLimitMessage] = checkLoginRateLimit($ip);
+        if (!$allowed) {
+            setFlashMessage('danger', $rateLimitMessage);
+        } elseif (login($username, $password)) {
             redirect('/index.php');
         } else {
+            recordFailedLoginAttempt($ip);
             setFlashMessage('danger', 'Usuario o contraseña incorrectos, o cuenta inactiva.');
         }
     }

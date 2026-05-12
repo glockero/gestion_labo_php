@@ -2,6 +2,7 @@
 // public/dashboard.php
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/../app/db.php';
+require_once __DIR__ . '/../app/estado.php';
 
 $pdo = getDbConnection();
 
@@ -9,7 +10,7 @@ $pdo = getDbConnection();
 $kpiHoy = $pdo->query("SELECT COUNT(*) FROM reparaciones WHERE DATE(fecha) = CURDATE()")->fetchColumn();
 $kpiSemana = $pdo->query("SELECT COUNT(*) FROM reparaciones WHERE YEARWEEK(fecha, 1) = YEARWEEK(CURDATE(), 1)")->fetchColumn();
 $kpiMes = $pdo->query("SELECT COUNT(*) FROM reparaciones WHERE MONTH(fecha) = MONTH(CURDATE()) AND YEAR(fecha) = YEAR(CURDATE())")->fetchColumn();
-$kpiReparados = $pdo->query("SELECT COUNT(*) FROM reparaciones WHERE estado = 'REPARADO' AND MONTH(fecha_reparado) = MONTH(CURDATE()) AND YEAR(fecha_reparado) = YEAR(CURDATE())")->fetchColumn();
+$kpiReparados = $pdo->query("SELECT COUNT(*) FROM reparaciones WHERE UPPER(estado) LIKE 'REPARADO%' AND MONTH(fecha_reparado) = MONTH(CURDATE()) AND YEAR(fecha_reparado) = YEAR(CURDATE())")->fetchColumn();
 
 // Data for charts
 $topEquipos = $pdo->query("SELECT equipo, COUNT(*) as total FROM reparaciones GROUP BY equipo ORDER BY total DESC LIMIT 10")->fetchAll();

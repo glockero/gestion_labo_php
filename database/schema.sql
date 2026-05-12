@@ -84,3 +84,11 @@ CREATE TABLE historial (
     FOREIGN KEY (reparacion_id) REFERENCES reparaciones(id) ON DELETE CASCADE,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE login_attempts (
+    ip VARCHAR(45) PRIMARY KEY,
+    attempts INT NOT NULL DEFAULT 0,
+    first_attempt_at DATETIME NOT NULL,
+    blocked_until DATETIME NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

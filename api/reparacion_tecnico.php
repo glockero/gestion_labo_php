@@ -2,6 +2,7 @@
 // api/reparacion_tecnico.php
 require_once __DIR__ . '/../app/config.php';
 require_once __DIR__ . '/../app/auth.php';
+require_once __DIR__ . '/../app/csrf.php';
 require_once __DIR__ . '/../app/db.php';
 require_once __DIR__ . '/../app/historial.php';
 
@@ -10,6 +11,12 @@ requireLogin();
 header('Content-Type: application/json');
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
+    exit;
+}
+
+if (($_SESSION['user_role'] ?? '') !== 'admin') {
+    http_response_code(403);
+    echo json_encode(['error' => 'Acción no autorizada']);
     exit;
 }
 
@@ -24,6 +31,14 @@ if (!validateCsrfToken($csrf)) {
 }
 
 $pdo = getDbConnection();
+
+$repStmt = $pdo->prepare("SELECT id FROM reparaciones WHERE id = ?");
+$repStmt->execute([$id]);
+if (!$repStmt->fetch()) {
+    http_response_code(404);
+    echo json_encode(['error' => 'No encontrado']);
+    exit;
+}
 
 // Get tech name
 $tecName = 'Sin Asignar';

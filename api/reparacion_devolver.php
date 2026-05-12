@@ -1,9 +1,10 @@
 <?php
-// api/reparacion_comentario.php
+// api/reparacion_devolver.php
 require_once __DIR__ . '/../app/config.php';
 require_once __DIR__ . '/../app/auth.php';
 require_once __DIR__ . '/../app/csrf.php';
 require_once __DIR__ . '/../app/db.php';
+require_once __DIR__ . '/../app/estado.php';
 require_once __DIR__ . '/../app/historial.php';
 
 requireLogin();
@@ -26,14 +27,14 @@ if (!validateCsrfToken($csrf)) {
     exit;
 }
 
-if (!$id || !$comentario) {
+if (!$id || $comentario === '') {
     http_response_code(400);
-    echo json_encode(['error' => 'Datos incompletos']);
+    echo json_encode(['error' => 'Debe ingresar un motivo de devolución']);
     exit;
 }
 
 $pdo = getDbConnection();
-$stmt = $pdo->prepare("SELECT observaciones, tecnico_id FROM reparaciones WHERE id = ?");
+$stmt = $pdo->prepare("SELECT estado, observaciones, tecnico_id FROM reparaciones WHERE id = ?");
 $stmt->execute([$id]);
 $rep = $stmt->fetch();
 
@@ -45,21 +46,29 @@ if (!$rep) {
 
 $userRole = $_SESSION['user_role'] ?? '';
 $tecnicoId = $_SESSION['tecnico_id'] ?? null;
-$canComment = $userRole === 'admin' || ($userRole === 'tecnico' && $rep['tecnico_id'] && (int)$rep['tecnico_id'] === (int)$tecnicoId);
+$canReturn = $userRole === 'admin' || ($userRole === 'tecnico' && $rep['tecnico_id'] && (int)$rep['tecnico_id'] === (int)$tecnicoId);
 
-if (!$canComment) {
+if (!$canReturn) {
     http_response_code(403);
     echo json_encode(['error' => 'Acción no autorizada']);
     exit;
 }
 
+$estadoActual = strtoupper((string)$rep['estado']);
+if ($userRole === 'tecnico' && isEstadoCerrado($estadoActual)) {
+    http_response_code(403);
+    echo json_encode(['error' => 'La reparación ya está cerrada']);
+    exit;
+}
+
 $fechaStr = date('d/m/Y H:i');
-$usuarioStr = $_SESSION['user_username'];
-$nuevaObs = "[$fechaStr - $usuarioStr]\n$comentario\n\n" . $rep['observaciones'];
+$usuarioStr = $_SESSION['user_username'] ?? 'Sistema';
+$nota = "[$fechaStr - $usuarioStr]\nDEVOLUCION DE EQUIPO\nMotivo: $comentario\n(Se desasignó el técnico y volvió a PEND. DE REVISION)";
+$nuevaObs = trim($nota . "\n\n" . ($rep['observaciones'] ?? ''));
 
-$stmt = $pdo->prepare("UPDATE reparaciones SET observaciones = ? WHERE id = ?");
-$stmt->execute([$nuevaObs, $id]);
+$update = $pdo->prepare("UPDATE reparaciones SET tecnico_id = NULL, estado = 'PEND. DE REVISION', observaciones = ?, fecha_pendiente = NOW() WHERE id = ?");
+$update->execute([$nuevaObs, $id]);
 
-registrarHistorial('COMENTARIO', $comentario, $id);
+registrarHistorial('DEVOLVER', $comentario, $id);
 
 echo json_encode(['success' => true, 'observaciones' => $nuevaObs]);

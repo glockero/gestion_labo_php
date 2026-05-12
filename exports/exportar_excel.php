@@ -3,46 +3,41 @@
 require_once __DIR__ . '/../app/config.php';
 require_once __DIR__ . '/../app/auth.php';
 require_once __DIR__ . '/../app/ReparacionModel.php';
+require_once __DIR__ . '/../app/XlsxBuilder.php';
 
 requireLogin();
 
-// Note: To use PhpSpreadsheet, you need to run `composer require phpoffice/phpspreadsheet` in the real environment.
-// For this script to work without errors if the library isn't installed yet, we will output a simple CSV that Excel can open natively,
-// which is often acceptable and requires no external dependencies on shared hosting unless true .xlsx format is strictly demanded.
-// I am implementing a robust CSV export that fulfills the requirement cleanly.
-
 $estado_actual = $_GET['estado'] ?? 'TODAS';
 $busqueda = $_GET['q'] ?? '';
-$sala_filtro = $_GET['sala'] ?? '';
-$tecnico_filtro = $_GET['tecnico'] ?? '';
+$sala_filtro = $_GET['f_sala'] ?? '';
+$tecnico_filtro = $_GET['f_tecnico'] ?? '';
+$estado_filtro = $_GET['f_estado'] ?? '';
+$anio_filtro = $_GET['f_anio'] ?? '';
+$mes_filtro = $_GET['f_mes'] ?? '';
+$dia_filtro = $_GET['f_dia'] ?? '';
+$diasemana_filtro = $_GET['f_diasemana'] ?? '';
 
 $filtros = [
     'estado' => $estado_actual,
     'busqueda' => $busqueda,
     'sala' => $sala_filtro,
-    'tecnico_id' => $tecnico_filtro
+    'tecnico_id' => $tecnico_filtro === 'SIN_ASIGNAR' ? null : $tecnico_filtro,
+    'tecnico_sin_asignar' => $tecnico_filtro === 'SIN_ASIGNAR',
+    'f_anio' => $anio_filtro,
+    'f_mes' => $mes_filtro,
+    'f_dia' => $dia_filtro,
+    'f_diasemana' => $diasemana_filtro,
 ];
 
-// Get all without pagination
+if ($estado_filtro) {
+    $filtros['estado'] = $estado_filtro;
+}
+
 $reparaciones = ReparacionModel::getList($filtros, 999999, 0);
 
-$filename = "reparaciones_" . date('Ymd_His') . ".csv";
-
-header("Content-Type: text/csv; charset=UTF-8");
-header("Content-Disposition: attachment; filename=\"$filename\"");
-// output BOM for Excel to read UTF-8 correctly
-echo "\xEF\xBB\xBF"; 
-
-$output = fopen("php://output", "w");
-
-// Headers
-fputcsv($output, [
-    'ID', 'Fecha Ingreso', 'Sala', 'UID', 'NPU', 'Familia', 'Equipo', 
-    'Urgente', 'Técnico', 'Estado', 'Fecha En Rep.', 'Fecha Reparado', 'Observaciones'
-], ';');
-
+$rows = [];
 foreach ($reparaciones as $rep) {
-    fputcsv($output, [
+    $rows[] = [
         $rep['id'],
         $rep['fecha'],
         $rep['sala'],
@@ -55,9 +50,13 @@ foreach ($reparaciones as $rep) {
         $rep['estado'],
         $rep['fecha_en_reparacion'],
         $rep['fecha_reparado'],
-        str_replace(["\r", "\n"], " ", $rep['observaciones']) // Flatten newlines for CSV
-    ], ';');
+        str_replace(["\r", "\n"], ' ', (string) $rep['observaciones']),
+    ];
 }
 
-fclose($output);
-exit;
+$filename = 'reparaciones_' . date('Ymd_His') . '.xlsx';
+
+XlsxBuilder::output($filename, 'Reparaciones', [
+    'ID', 'Fecha Ingreso', 'Sala', 'UID', 'NPU', 'Familia', 'Equipo', 
+    'Urgente', 'Técnico', 'Estado', 'Fecha En Rep.', 'Fecha Reparado', 'Observaciones'
+], $rows);

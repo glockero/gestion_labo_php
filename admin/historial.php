@@ -1,9 +1,14 @@
 <?php
 // admin/historial.php
-require_once __DIR__ . '/../public/includes/header.php';
+require_once __DIR__ . '/../app/config.php';
+require_once __DIR__ . '/../app/auth.php';
+require_once __DIR__ . '/../app/helpers.php';
+require_once __DIR__ . '/../app/flash.php';
 require_once __DIR__ . '/../app/db.php';
 
 requireRole('admin');
+
+require_once __DIR__ . '/../public/includes/header.php';
 
 $pdo = getDbConnection();
 

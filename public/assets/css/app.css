@@ -19,6 +19,7 @@ body {
     min-height: 100vh;
     display: flex;
     margin: 0;
+    overflow-x: hidden;
 }
 
 /* Sidebar Styling */
@@ -90,6 +91,9 @@ body {
     flex-grow: 1;
     padding: 2rem;
     width: calc(100% - var(--sidebar-width));
+    max-width: calc(100vw - var(--sidebar-width));
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .sidebar-toggler {
@@ -115,7 +119,10 @@ body {
     .main-content {
         margin-left: 0;
         width: 100%;
+        max-width: 100%;
         padding-top: 4rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
     }
     .sidebar-toggler {
         display: block;

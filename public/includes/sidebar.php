@@ -47,6 +47,10 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <i class="bi bi-clock-history"></i>
             <span>HISTORIAL</span>
         </a>
+        <a href="<?= APP_URL ?>/../admin/importar_csv.php" class="sidebar-link <?= $current_page == 'importar_csv.php' ? 'active' : '' ?>">
+            <i class="bi bi-file-earmark-arrow-up"></i>
+            <span>IMPORTAR CSV</span>
+        </a>
         <?php endif; ?>
     </div>
 
