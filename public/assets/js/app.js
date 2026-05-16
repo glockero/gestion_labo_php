@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.tom-select').forEach((el) => {
         new TomSelect(el, {
             create: el.hasAttribute('data-allow-new'),
+            // Default cap is 50 — too low for the equipos catalog (200+ rows).
+            maxOptions: 1000,
             sortField: {
                 field: "text",
                 direction: "asc"

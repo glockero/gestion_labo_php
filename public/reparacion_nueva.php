@@ -34,13 +34,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         // Handle Tom Select "allow-new" by ensuring catalog entries exist
+        $familiaInput = $_POST['familia'] ?? '';
+        if ($familiaInput === '__SIN_FAMILIA__') {
+            $familiaInput = '';
+        }
+
         $sala_id = CatalogoModel::asegurarExiste('salas', $_POST['sala'] ?? '');
         $equipo_id = CatalogoModel::asegurarExiste('equipos', $_POST['equipo'] ?? '');
-        $familia_id = CatalogoModel::asegurarExiste('familias', $_POST['familia'] ?? '');
-        
+        $familia_id = CatalogoModel::asegurarExiste('familias', $familiaInput);
+
         $sala = $_POST['sala'] ?? '';
         $equipo = $_POST['equipo'] ?? '';
-        $familia = $_POST['familia'] ?? '';
+        $familia = $familiaInput;
         
         $uid = trim($_POST['uid'] ?? '');
         $npu = trim($_POST['npu'] ?? '');
@@ -135,7 +140,7 @@ require_once __DIR__ . '/includes/header.php';
         box-shadow: 0 1px 2px rgba(0,0,0,0.02);
         max-width: 960px;
         margin: 0 auto;
-        overflow: hidden;
+        /* No overflow: hidden — Tom Select's dropdown extends below the card */
     }
 
     .dense-card .card-body {
@@ -322,6 +327,42 @@ require_once __DIR__ . '/includes/header.php';
     .ts-control > input {
         font-size: 14px !important;
     }
+    /* Dropdown panel: roomier with single-line items + tooltip for long names */
+    .ts-dropdown {
+        border-radius: 6px !important;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12) !important;
+        border-color: #cbd5e1 !important;
+        min-width: 100% !important;
+        width: auto !important;
+        max-width: 480px !important;
+    }
+    .ts-dropdown .ts-dropdown-content {
+        max-height: 420px !important;
+    }
+    .ts-dropdown .option {
+        padding: 0.45rem 0.75rem !important;
+        font-size: 13px !important;
+        line-height: 1.3 !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .ts-dropdown .option.active,
+    .ts-dropdown .option:hover {
+        background: #eff6ff !important;
+        color: #1e293b !important;
+    }
+    .ts-dropdown .option.selected {
+        background: #dbeafe !important;
+        color: #1d4ed8 !important;
+        font-weight: 600;
+    }
+    .ts-dropdown .no-results {
+        padding: 0.6rem 0.75rem !important;
+        color: #94a3b8 !important;
+        font-style: italic;
+    }
 </style>
 
 <div class="form-shell">
@@ -370,8 +411,9 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="row g-2">
                             <div class="col-6">
                                 <label class="form-label-compact">Familia</label>
-                                <select name="familia" class="form-select tom-select" data-allow-new>
+                                <select name="familia" id="select-familia" class="form-select tom-select" data-allow-new>
                                     <option value="">Seleccione o escriba...</option>
+                                    <option value="__SIN_FAMILIA__">(Sin familia)</option>
                                     <?php foreach ($familias as $f): ?>
                                         <option value="<?= e($f['nombre']) ?>"><?= e($f['nombre']) ?></option>
                                     <?php endforeach; ?>
@@ -379,10 +421,10 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
                             <div class="col-6">
                                 <label class="form-label-compact">Equipo <span class="text-danger">*</span></label>
-                                <select name="equipo" class="form-select tom-select" data-allow-new required>
+                                <select name="equipo" id="select-equipo" class="form-select tom-select" data-allow-new required>
                                     <option value="">Seleccione o escriba...</option>
                                     <?php foreach ($equipos as $eq): ?>
-                                        <option value="<?= e($eq['nombre']) ?>"><?= e($eq['nombre']) ?></option>
+                                        <option value="<?= e($eq['nombre']) ?>" data-familia="<?= e($eq['familia'] ?? '') ?>"><?= e($eq['nombre']) ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
@@ -466,6 +508,69 @@ document.addEventListener('DOMContentLoaded', function() {
                 fechaInput.setAttribute('readonly', 'readonly');
                 fechaInput.classList.add('bg-light');
             }
+        });
+    }
+
+    // Equipo ↔ Familia: bidirectional sync.
+    // - Pick an Equipo → auto-fill its Familia.
+    // - Pick a Familia → filter the Equipo dropdown to only that familia
+    //   (empty familia = show all). Equipos without familia stay visible
+    //   only when no familia filter is active.
+    const selectEquipo = document.getElementById('select-equipo');
+    const selectFamilia = document.getElementById('select-familia');
+
+    // Snapshot every equipo option once so we can re-populate after filtering.
+    const allEquipos = selectEquipo
+        ? Array.from(selectEquipo.querySelectorAll('option'))
+            .filter(o => o.value !== '')
+            .map(o => ({ value: o.value, text: o.textContent, familia: o.dataset.familia || '' }))
+        : [];
+
+    function applyFamiliaFilter(familia) {
+        if (!selectEquipo || !selectEquipo.tomselect) return;
+        const ts = selectEquipo.tomselect;
+        const currentValue = ts.getValue();
+        let filtered;
+        if (!familia) {
+            filtered = allEquipos;
+        } else if (familia === '__SIN_FAMILIA__') {
+            filtered = allEquipos.filter(e => !e.familia);
+        } else {
+            filtered = allEquipos.filter(e => e.familia === familia);
+        }
+
+        ts.clearOptions();
+        filtered.forEach(e => ts.addOption({ value: e.value, text: e.text, familia: e.familia }));
+        ts.refreshOptions(false);
+
+        // If the currently selected equipo is no longer in the filtered list, clear it.
+        if (currentValue && !filtered.some(e => e.value === currentValue)) {
+            ts.clear(true);
+        }
+    }
+
+    if (selectEquipo && selectFamilia) {
+        selectEquipo.addEventListener('change', () => {
+            const val = selectEquipo.value;
+            const match = allEquipos.find(e => e.value === val);
+            const familia = match ? match.familia : '';
+            if (!familia) return;
+            if (selectFamilia.tomselect) {
+                if (!selectFamilia.tomselect.options[familia]) {
+                    selectFamilia.tomselect.addOption({ value: familia, text: familia });
+                }
+                // Avoid recursion: only set if different.
+                if (selectFamilia.tomselect.getValue() !== familia) {
+                    selectFamilia.tomselect.setValue(familia, true); // silent
+                    applyFamiliaFilter(familia);
+                }
+            } else {
+                selectFamilia.value = familia;
+            }
+        });
+
+        selectFamilia.addEventListener('change', () => {
+            applyFamiliaFilter(selectFamilia.value || '');
         });
     }
 

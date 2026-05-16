@@ -468,19 +468,15 @@ if (count($npu_list) > 0) {
         flex-shrink: 0;
     }
 
-    /* Urgent rows: full red outline so they stand out at a glance */
+    /* Urgent rows: red outline only (no background tint) */
     .urgent-row td {
-        background: #fef2f2 !important;
         box-shadow: inset 0 1px 0 0 #ef4444, inset 0 -1px 0 0 #ef4444;
     }
     .urgent-row td:first-child {
-        box-shadow: inset 4px 0 0 0 #ef4444, inset 0 1px 0 0 #ef4444, inset 0 -1px 0 0 #ef4444;
+        box-shadow: inset 1px 0 0 0 #ef4444, inset 0 1px 0 0 #ef4444, inset 0 -1px 0 0 #ef4444;
     }
     .urgent-row td:last-child {
         box-shadow: inset -1px 0 0 0 #ef4444, inset 0 1px 0 0 #ef4444, inset 0 -1px 0 0 #ef4444;
-    }
-    .urgent-row:hover td {
-        background: #fee2e2 !important;
     }
     
     .cell-tech { font-size: 13px; font-weight: 500; }
@@ -817,10 +813,11 @@ if (count($npu_list) > 0) {
                     <th>Técnico</th>
                     <th>Estado</th>
                     <?php if ($estado_actual === 'EN_REPARACION'): ?>
-                        <th>Inicio Rep.</th>
+                        <th style="width: 95px;">Inicio Rep.</th>
                     <?php endif; ?>
                     <?php if ($estado_actual === 'REPARADOS'): ?>
-                        <th>Fecha Rep.</th>
+                        <th style="width: 95px;">Fecha Rep.</th>
+                        <th class="text-end" style="width: 115px;">Ahorro</th>
                     <?php endif; ?>
                     <th>Observaciones</th>
                     <th class="text-end">Acciones</th>
@@ -859,7 +856,8 @@ if (count($npu_list) > 0) {
                                     <button type="button" class="badge bg-warning text-dark border border-warning ms-1 npu-history-btn"
                                             style="font-size: 10px; padding: 0.15rem 0.3rem; cursor: pointer; line-height: 1;"
                                             title="Ver las <?= $reps ?> reparaciones de este NPU"
-                                            data-npu="<?= e(trim($r['npu'])) ?>"><?= $reps ?></button>
+                                            data-npu="<?= e(trim($r['npu'])) ?>"
+                                            data-current-id="<?= e($r['id']) ?>"><?= $reps ?></button>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -908,6 +906,10 @@ if (count($npu_list) > 0) {
                     <?php if ($estado_actual === 'REPARADOS'): ?>
                         <td class="cell-date fw-bold text-dark">
                             <?= $r['fecha_reparado'] ? date('d/m/y', strtotime($r['fecha_reparado'])) : '--' ?>
+                        </td>
+                        <td class="text-end text-nowrap fw-bold text-dark" style="font-variant-numeric: tabular-nums;">
+                            <?php $costo = formatArs($r['equipo_valor'] ?? null); ?>
+                            <?= $costo !== null ? e($costo) : '<span class="text-muted fw-normal">—</span>' ?>
                         </td>
                     <?php endif; ?>
 
@@ -1135,7 +1137,7 @@ document.getElementById('perPageSelect')?.addEventListener('change', function ()
         wrapperEl.style.display = state === 'data'    ? '' : 'none';
     }
 
-    async function openNpuHistory(npu) {
+    async function openNpuHistory(npu, currentId) {
         npuLabel.textContent = npu;
         countLabel.textContent = '';
         tbodyEl.innerHTML = '';
@@ -1153,21 +1155,32 @@ document.getElementById('perPageSelect')?.addEventListener('change', function ()
                 return;
             }
 
-            tbodyEl.innerHTML = reps.map(r => `
-                <tr${r.urgente === 'SI' ? ' style="background: #fef2f2;"' : ''}>
-                    <td style="padding: 0.35rem 0.6rem;"><strong>#${esc(r.id)}</strong></td>
+            const curId = String(currentId ?? '');
+            tbodyEl.innerHTML = reps.map(r => {
+                const isCurrent = curId !== '' && String(r.id) === curId;
+                const rowBg = isCurrent ? '#dbeafe' : (r.urgente === 'SI' ? '#fef2f2' : '');
+                const rowStyle = rowBg
+                    ? ` style="background: ${rowBg};${isCurrent ? ' border-left: 3px solid #2563eb;' : ''}"`
+                    : '';
+                const currentBadge = isCurrent
+                    ? ` <span class="badge bg-primary ms-1" style="font-size: 9px; padding: 2px 5px; vertical-align: middle;">ACTUAL</span>`
+                    : '';
+                return `
+                <tr${rowStyle}>
+                    <td style="padding: 0.35rem 0.6rem;"><strong>#${esc(r.id)}</strong>${currentBadge}</td>
                     <td style="padding: 0.35rem 0.6rem; white-space: nowrap;">${esc(r.fecha_fmt)}</td>
                     <td style="padding: 0.35rem 0.6rem;">${esc(r.equipo)}</td>
                     <td style="padding: 0.35rem 0.6rem;">${esc(r.sala)}</td>
                     <td style="padding: 0.35rem 0.6rem;">${esc(r.tecnico_nombre || '—')}</td>
                     <td style="padding: 0.35rem 0.6rem;"><span class="status-pill ${statusClass(r.estado)}" style="font-size: 10px; min-width: 0; padding: 3px 6px;">${esc(r.estado)}</span></td>
                     <td style="padding: 0.35rem 0.6rem; text-align: center;">
-                        <a href="reparacion_detalle.php?id=${esc(r.id)}" class="action-btn" title="Abrir ficha">
-                            <i class="bi bi-box-arrow-up-right"></i>
-                        </a>
+                        ${isCurrent
+                            ? '<span class="text-muted" title="Estás viendo esta fila"><i class="bi bi-geo-alt-fill"></i></span>'
+                            : `<a href="reparacion_detalle.php?id=${esc(r.id)}" class="action-btn" title="Abrir ficha"><i class="bi bi-box-arrow-up-right"></i></a>`}
                     </td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
 
             countLabel.textContent = `${reps.length} ingreso${reps.length === 1 ? '' : 's'} para este NPU`;
             showState('data');
@@ -1182,7 +1195,7 @@ document.getElementById('perPageSelect')?.addEventListener('change', function ()
         const btn = e.target.closest('.npu-history-btn');
         if (!btn) return;
         e.preventDefault();
-        openNpuHistory(btn.dataset.npu);
+        openNpuHistory(btn.dataset.npu, btn.dataset.currentId);
     });
 })();
 </script>

@@ -58,7 +58,34 @@ function getActionColor($accion) {
     if (strpos($accion, 'ESTADO') !== false) return 'bg-primary';
     if (strpos($accion, 'INGRESO') !== false) return 'bg-warning text-dark';
     if (strpos($accion, 'EDITAR') !== false) return 'bg-info text-dark';
+    if (strpos($accion, 'ELIMINAR') !== false) return 'bg-danger';
+    if (strpos($accion, 'CREAR') !== false || strpos($accion, 'IMPORTAR') !== false) return 'bg-success';
+    if (strpos($accion, 'RESET') !== false || strpos($accion, 'PASS') !== false) return 'bg-warning text-dark';
     return 'bg-dark';
+}
+
+/**
+ * Returns a shorter, human-friendly label for an action stored in BD.
+ * The DB still keeps the canonical key (USUARIO_ELIMINAR, etc.) — this is
+ * only used at render time so labels fit a narrow column without truncating.
+ */
+function getActionLabel($accion) {
+    static $map = [
+        'USUARIO_CREAR'         => 'USR. CREAR',
+        'USUARIO_EDITAR'        => 'USR. EDITAR',
+        'USUARIO_ELIMINAR'      => 'USR. ELIMINAR',
+        'USUARIO_RESET_PASS'    => 'RESET PASS',
+        'USUARIO_FORCE_LOGOUT'  => 'FORZAR LOGOUT',
+        'USUARIO_CAMBIO_PASS'   => 'CAMBIO PASS',
+        'CATALOGO_EDITAR'       => 'CAT. EDITAR',
+        'CATALOGO_ELIMINAR'     => 'CAT. ELIMINAR',
+        'CATALOGO_TOGGLE'       => 'CAT. TOGGLE',
+        'IMPORTAR_FAMILIAS'     => 'IMPORT FAM.',
+        'IMPORTAR_EQUIPOS'      => 'IMPORT EQUIP.',
+        'IMPORTAR_REPARACIONES' => 'IMPORT REP.',
+        'RESET_REPARACIONES'    => 'RESET REP.',
+    ];
+    return $map[$accion] ?? $accion;
 }
 ?>
 
@@ -83,8 +110,17 @@ function getActionColor($accion) {
 /* Column sizing: keep Fecha/Usuario/Acción/Reparación narrow; Detalle takes the rest */
 .col-h-fecha    { width: 165px; }
 .col-h-usuario  { width: 120px; }
-.col-h-accion   { width: 130px; }
+.col-h-accion   { width: 160px; }
 .col-h-rep      { width: 220px; }
+
+/* Action badge: allow wrap on long labels and use a tighter font */
+.col-h-accion .badge {
+    font-size: 10.5px;
+    padding: 0.32em 0.5em;
+    white-space: normal;
+    line-height: 1.2;
+    text-align: left;
+}
 
 /* Prevent fixed-width cells from overflowing into neighbors */
 .historial-table-scroll td,
@@ -149,7 +185,7 @@ function getActionColor($accion) {
                 <tr>
                     <td class="col-h-fecha text-nowrap"><?= formatDatetimeArg($r['fecha']) ?></td>
                     <td class="col-h-usuario"><strong><?= e($r['username'] ?? 'Sistema') ?></strong></td>
-                    <td class="col-h-accion"><span class="badge <?= getActionColor($r['accion']) ?>"><?= e($r['accion']) ?></span></td>
+                    <td class="col-h-accion"><span class="badge <?= getActionColor($r['accion']) ?>" title="<?= e($r['accion']) ?>"><?= e(getActionLabel($r['accion'])) ?></span></td>
                     <td class="col-h-detalle small"><?= e($r['detalle']) ?></td>
                     <td class="col-h-rep">
                         <?php if ($r['reparacion_id']): ?>

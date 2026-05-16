@@ -1,16 +1,77 @@
 <?php
 // app/CatalogoModel.php
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/helpers.php';
 
 class CatalogoModel {
-    private static function ensureReparacionesSchema() {
+    public static function ensureReparacionesSchema() {
         static $done = false;
         if ($done) return;
         $pdo = getDbConnection();
         if (!$pdo->query("SHOW COLUMNS FROM reparaciones LIKE 'tecnico_nombre_historico'")->fetch()) {
             $pdo->exec("ALTER TABLE reparaciones ADD COLUMN tecnico_nombre_historico VARCHAR(100) NULL AFTER tecnico_id");
         }
+        if (!$pdo->query("SHOW COLUMNS FROM reparaciones LIKE 'valor_ahorrado'")->fetch()) {
+            $pdo->exec("ALTER TABLE reparaciones ADD COLUMN valor_ahorrado DECIMAL(12,2) NULL AFTER fecha_reparado");
+            self::backfillValorAhorrado();
+        }
         $done = true;
+    }
+
+    /**
+     * Populate reparaciones.valor_ahorrado from equipos_catalogo.valor for
+     * already-completed repairs (estado LIKE 'REPARADO%'). Runs once when the
+     * column is first added — best approximation for historical rows where
+     * we never captured the catalog value at the time of completion.
+     */
+    private static function backfillValorAhorrado() {
+        $pdo = getDbConnection();
+        $rows = $pdo->query("
+            SELECT r.id, ec.valor
+            FROM reparaciones r
+            LEFT JOIN equipos_catalogo ec ON ec.nombre = r.equipo
+            WHERE r.valor_ahorrado IS NULL
+              AND UPPER(r.estado) LIKE 'REPARADO%'
+              AND ec.valor IS NOT NULL
+              AND ec.valor <> ''
+        ")->fetchAll();
+        if (!$rows) return;
+        $update = $pdo->prepare("UPDATE reparaciones SET valor_ahorrado = ? WHERE id = ?");
+        foreach ($rows as $row) {
+            $val = parseArsToFloat($row['valor']);
+            if ($val !== null) {
+                $update->execute([$val, $row['id']]);
+            }
+        }
+    }
+
+    /**
+     * Apply the same partial update to several equipos at once.
+     * Only whitelisted columns ('familia', 'valor') are accepted from the
+     * outside. Empty string values become NULL so the admin can clear fields.
+     * Returns the number of rows actually changed.
+     */
+    public static function bulkUpdateEquipos(array $ids, array $updates) {
+        $ids = array_values(array_filter(array_map('intval', $ids), fn($v) => $v > 0));
+        if (!$ids) return 0;
+
+        $allowed = ['familia', 'valor'];
+        $sets = [];
+        $params = [];
+        foreach ($updates as $col => $val) {
+            if (!in_array($col, $allowed, true)) continue;
+            $sets[] = "$col = ?";
+            $params[] = ($val === '' || $val === null) ? null : trim((string)$val);
+        }
+        if (!$sets) return 0;
+
+        self::ensureEquiposSchema();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "UPDATE equipos_catalogo SET " . implode(', ', $sets) . " WHERE id IN ($placeholders)";
+        $pdo = getDbConnection();
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute(array_merge($params, $ids));
+        return $stmt->rowCount();
     }
 
     /**
@@ -38,6 +99,9 @@ class CatalogoModel {
         $pdo = getDbConnection();
         if (!$pdo->query("SHOW COLUMNS FROM equipos_catalogo LIKE 'lab'")->fetch()) {
             $pdo->exec("ALTER TABLE equipos_catalogo ADD COLUMN lab INT NULL UNIQUE AFTER id");
+        }
+        if (!$pdo->query("SHOW COLUMNS FROM equipos_catalogo LIKE 'familia'")->fetch()) {
+            $pdo->exec("ALTER TABLE equipos_catalogo ADD COLUMN familia VARCHAR(100) NULL AFTER nombre");
         }
         self::backfillEquipoLabs();
         $done = true;
@@ -118,8 +182,9 @@ class CatalogoModel {
 
     /**
      * For equipos, $extra may be a string (legacy: valor) or an array:
-     *   ['valor' => ..., 'lab' => ...]
+     *   ['valor' => ..., 'lab' => ..., 'familia' => ...]
      * lab is an optional unique integer identifier.
+     * familia links the equipo to a row in familias_catalogo (free-text match).
      */
     public static function agregar($tipo, $nombre, $extra = null) {
         $tabla = self::getTable($tipo);
@@ -132,9 +197,9 @@ class CatalogoModel {
         try {
             if ($tipo === 'equipos') {
                 self::ensureEquiposSchema();
-                [$valor, $lab] = self::unpackEquipoExtra($extra);
-                $stmt = $pdo->prepare("INSERT INTO $tabla (nombre, valor, lab) VALUES (?, ?, ?)");
-                return $stmt->execute([$nombre, $valor, $lab]);
+                [$valor, $lab, $familia] = self::unpackEquipoExtra($extra);
+                $stmt = $pdo->prepare("INSERT INTO $tabla (nombre, valor, lab, familia) VALUES (?, ?, ?, ?)");
+                return $stmt->execute([$nombre, $valor, $lab, $familia]);
             }
             $stmt = $pdo->prepare("INSERT INTO $tabla (nombre) VALUES (?)");
             return $stmt->execute([$nombre]);
@@ -158,11 +223,13 @@ class CatalogoModel {
 
         if ($tipo === 'equipos') {
             self::ensureEquiposSchema();
-            [$valor, $lab] = self::unpackEquipoExtra($extra);
+            [$valor, $lab, $familia] = self::unpackEquipoExtra($extra);
             $fields[] = "valor = ?";
             $params[] = $valor;
             $fields[] = "lab = ?";
             $params[] = $lab;
+            $fields[] = "familia = ?";
+            $params[] = $familia;
         }
 
         if ($tipo === 'tecnicos' && $activo !== null) {
@@ -180,11 +247,12 @@ class CatalogoModel {
         if (is_array($extra)) {
             $valor = isset($extra['valor']) && trim((string)$extra['valor']) !== '' ? trim((string)$extra['valor']) : null;
             $lab = isset($extra['lab']) && $extra['lab'] !== '' ? (int)$extra['lab'] : null;
-            return [$valor, $lab];
+            $familia = isset($extra['familia']) && trim((string)$extra['familia']) !== '' ? trim((string)$extra['familia']) : null;
+            return [$valor, $lab, $familia];
         }
         // Legacy: extra is just the "valor" string
         $valor = $extra !== null && trim((string)$extra) !== '' ? trim((string)$extra) : null;
-        return [$valor, null];
+        return [$valor, null, null];
     }
 
     /**

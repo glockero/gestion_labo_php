@@ -34,6 +34,7 @@ CREATE TABLE equipos_catalogo (
     id INT AUTO_INCREMENT PRIMARY KEY,
     lab INT NULL UNIQUE,
     nombre VARCHAR(100) NOT NULL UNIQUE,
+    familia VARCHAR(100) NULL,
     valor VARCHAR(100) NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -67,6 +68,7 @@ CREATE TABLE reparaciones (
     dia_semana VARCHAR(20) NULL,
     fecha_en_reparacion DATETIME NULL,
     fecha_reparado DATETIME NULL,
+    valor_ahorrado DECIMAL(12,2) NULL,
     fecha_pendiente DATETIME NULL,
     fecha_sin_reparacion DATETIME NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

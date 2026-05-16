@@ -48,6 +48,42 @@ class UsuarioModel {
         return $stmt->execute([$status, $id]);
     }
 
+    /**
+     * Find a user by username including soft-deleted rows.
+     * Used to detect "revive" scenarios when creating a user whose name
+     * was previously taken by someone now deleted.
+     */
+    public static function getByUsernameIncludingDeleted($username) {
+        self::ensureSchema();
+        $pdo = getDbConnection();
+        $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE username = ?");
+        $stmt->execute([$username]);
+        return $stmt->fetch() ?: null;
+    }
+
+    /**
+     * Restore a soft-deleted user, applying new credentials/role/tecnico
+     * as if it were a fresh create. Wipes any leftover session and reset flags.
+     */
+    public static function reviveByUsername($username, $password, $rol, $tecnicoId = null, $activo = true) {
+        self::ensureSchema();
+        self::assertPasswordStrength($password);
+        $pdo = getDbConnection();
+        $rol = $rol === 'admin' ? 'admin' : 'tecnico';
+        $tecnicoId = $rol === 'tecnico' && $tecnicoId ? $tecnicoId : null;
+        $hash = password_hash($password, PASSWORD_DEFAULT);
+
+        $stmt = $pdo->prepare("
+            UPDATE usuarios
+            SET password_hash = ?, rol = ?, tecnico_id = ?, activo = ?,
+                deleted_at = NULL, password_reset_required = 0,
+                session_id = NULL, last_login = NULL, last_ip = NULL
+            WHERE username = ? AND deleted_at IS NOT NULL
+        ");
+        $stmt->execute([$hash, $rol, $tecnicoId, $activo ? 1 : 0, $username]);
+        return $stmt->rowCount() > 0;
+    }
+
     public static function softDelete($id) {
         self::ensureSchema();
         $pdo = getDbConnection();

@@ -52,7 +52,9 @@ function runQuery(PDO $pdo, $sql, $params) {
     return $stmt;
 }
 
-// --- KPIs (single query with SUM CASE WHEN, plus avg-time fields) ---------
+// --- KPIs (single query with SUM CASE WHEN, plus avg-time field) ----------
+// avg_dias_reparacion: midiendo *trabajo efectivo* — desde que entra a
+// "EN REPARACION" hasta que llega a "REPARADO". Excluye el tiempo en cola.
 $kpiRow = runQuery($pdo, "
     SELECT
         COUNT(*) AS total,
@@ -67,29 +69,25 @@ $kpiRow = runQuery($pdo, "
               AND UPPER(r.estado) NOT LIKE 'REPARADO%'
               AND UPPER(r.estado) NOT LIKE 'SIN REPARACION%'
             THEN 1 ELSE 0 END) AS urgentes,
-        SUM(CASE WHEN UPPER(r.estado) = 'ENTREGADO' THEN 1 ELSE 0 END) AS entregadas,
         AVG(CASE WHEN r.fecha_reparado IS NOT NULL
-              THEN TIMESTAMPDIFF(HOUR, r.fecha, r.fecha_reparado) / 24.0
-            END) AS avg_dias_reparacion,
-        AVG(CASE WHEN r.fecha_en_reparacion IS NOT NULL
-              THEN TIMESTAMPDIFF(HOUR, r.fecha, r.fecha_en_reparacion) / 24.0
-            END) AS avg_dias_cola
+                  AND r.fecha_en_reparacion IS NOT NULL
+                  AND r.fecha_reparado >= r.fecha_en_reparacion
+              THEN TIMESTAMPDIFF(HOUR, r.fecha_en_reparacion, r.fecha_reparado) / 24.0
+            END) AS avg_dias_reparacion
     FROM reparaciones r
     WHERE $whereClause
 ", $params)->fetch();
 
 $total = (int)($kpiRow['total'] ?? 0);
 $kpis = [
-    ['label' => 'Total ingresadas',  'value' => $total,                                'color' => '#1e293b'],
+    ['label' => 'Rep. tomadas',      'value' => $total,                                'color' => '#1e293b'],
     ['label' => 'Reparadas',         'value' => (int)$kpiRow['reparadas'],             'color' => '#166534'],
     ['label' => 'En curso',          'value' => (int)$kpiRow['en_curso'],              'color' => '#1d4ed8'],
     ['label' => 'Sin reparación',    'value' => (int)$kpiRow['sin_reparacion'],        'color' => '#991b1b'],
     ['label' => 'Urgentes activas',  'value' => (int)$kpiRow['urgentes'],              'color' => '#b45309'],
-    ['label' => 'Entregadas',        'value' => (int)$kpiRow['entregadas'],            'color' => '#475569'],
 ];
 
 $avg_reparacion = $kpiRow['avg_dias_reparacion'] !== null ? (float)$kpiRow['avg_dias_reparacion'] : null;
-$avg_cola = $kpiRow['avg_dias_cola'] !== null ? (float)$kpiRow['avg_dias_cola'] : null;
 $total_cerradas = (int)$kpiRow['reparadas'] + (int)$kpiRow['sin_reparacion'];
 $pct_exito_global = $total_cerradas > 0 ? round(((int)$kpiRow['reparadas'] / $total_cerradas) * 100, 1) : null;
 $pct_urgencia = $total > 0 ? round(((int)$kpiRow['urgentes'] / $total) * 100, 1) : null;
@@ -395,11 +393,11 @@ function avatarColorMetrica($nombre, $palette) {
     <!-- KPIs grid -->
     <div class="row g-2 mb-3">
         <?php foreach ($kpis as $kpi):
-            $pct = $total > 0 && $kpi['label'] !== 'Total ingresadas'
+            $pct = $total > 0 && $kpi['label'] !== 'Rep. tomadas'
                 ? round(($kpi['value'] / $total) * 100, 1)
                 : null;
         ?>
-        <div class="col-6 col-md-4 col-lg-2">
+        <div class="col-6 col-md-4 col-lg">
             <div class="kpi-card" style="border-left: 3px solid <?= e($kpi['color']) ?>;">
                 <div class="kpi-label"><?= e($kpi['label']) ?></div>
                 <div class="kpi-value" style="color: <?= e($kpi['color']) ?>;">
@@ -417,7 +415,7 @@ function avatarColorMetrica($nombre, $palette) {
 
     <!-- Indicadores de rendimiento -->
     <div class="row g-2 mb-3">
-        <div class="col-12 col-md-6 col-lg-3">
+        <div class="col-12 col-md-4">
             <div class="kpi-card" style="border-left: 3px solid #0ea5e9;">
                 <div class="kpi-label"><i class="bi bi-stopwatch me-1"></i>Tiempo prom. reparación</div>
                 <div class="kpi-value" style="color: #0ea5e9; font-size: 22px;">
@@ -428,24 +426,10 @@ function avatarColorMetrica($nombre, $palette) {
                         <span style="font-size: 16px; color: #94a3b8; font-style: italic;">Sin datos</span>
                     <?php endif; ?>
                 </div>
-                <div class="kpi-pct">Desde ingreso a "Reparado"</div>
+                <div class="kpi-pct">Desde "En reparación" hasta "Reparado"</div>
             </div>
         </div>
-        <div class="col-12 col-md-6 col-lg-3">
-            <div class="kpi-card" style="border-left: 3px solid #8b5cf6;">
-                <div class="kpi-label"><i class="bi bi-hourglass-split me-1"></i>Tiempo prom. en cola</div>
-                <div class="kpi-value" style="color: #8b5cf6; font-size: 22px;">
-                    <?php if ($avg_cola !== null): ?>
-                        <?= number_format($avg_cola, 1, ',', '.') ?>
-                        <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">días</span>
-                    <?php else: ?>
-                        <span style="font-size: 16px; color: #94a3b8; font-style: italic;">Sin datos</span>
-                    <?php endif; ?>
-                </div>
-                <div class="kpi-pct">Desde ingreso a "En reparación"</div>
-            </div>
-        </div>
-        <div class="col-12 col-md-6 col-lg-3">
+        <div class="col-12 col-md-4">
             <div class="kpi-card" style="border-left: 3px solid #16a34a;">
                 <div class="kpi-label"><i class="bi bi-check2-circle me-1"></i>% Éxito global</div>
                 <div class="kpi-value" style="color: #16a34a; font-size: 22px;">
@@ -458,7 +442,7 @@ function avatarColorMetrica($nombre, $palette) {
                 <div class="kpi-pct">Reparadas / (Reparadas + Sin Rep.)</div>
             </div>
         </div>
-        <div class="col-12 col-md-6 col-lg-3">
+        <div class="col-12 col-md-4">
             <div class="kpi-card" style="border-left: 3px solid #ef4444;">
                 <div class="kpi-label"><i class="bi bi-exclamation-triangle me-1"></i>% Urgentes</div>
                 <div class="kpi-value" style="color: #ef4444; font-size: 22px;">

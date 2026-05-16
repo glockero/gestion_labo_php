@@ -28,21 +28,34 @@ require_once __DIR__ . '/includes/header.php';
 
 $historial = ReparacionModel::getHistorialReparacion($id);
 
-// How many other repairs share this NPU? Used to surface a "history" badge
-// next to the NPU value if it has been processed multiple times.
-$npuTotalCount = 0;
+// Other repairs that share this NPU — used to surface a collapsible
+// "Historial del NPU" card below the equipment data. Excludes the current
+// repair so the user sees only the history, not a self-reference.
+$npuOtrasReparaciones = [];
 if (!empty($rep['npu'])) {
     $pdo = getDbConnection();
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM reparaciones WHERE TRIM(npu) = ?");
-    $stmt->execute([trim($rep['npu'])]);
-    $npuTotalCount = (int)$stmt->fetchColumn();
+    $stmt = $pdo->prepare("
+        SELECT r.id, r.fecha, r.equipo, r.sala, r.estado, r.urgente,
+               COALESCE(t.nombre, r.tecnico_nombre_historico) AS tecnico_nombre
+        FROM reparaciones r
+        LEFT JOIN tecnicos t ON r.tecnico_id = t.id
+        WHERE TRIM(r.npu) = ? AND r.id <> ?
+        ORDER BY r.fecha DESC, r.id DESC
+    ");
+    $stmt->execute([trim($rep['npu']), $rep['id']]);
+    $npuOtrasReparaciones = $stmt->fetchAll();
 }
+$npuTotalCount = count($npuOtrasReparaciones);
 $tecnicos = CatalogoModel::getAll('tecnicos');
 $estados_catalogo = CatalogoModel::getAll('estados');
 $is_admin = $user_role === 'admin';
 $is_assigned_tecnico = $user_role === 'tecnico' && !empty($rep['tecnico_id']) && (int)$rep['tecnico_id'] === (int)($_SESSION['tecnico_id'] ?? 0);
 $can_manage_rep = $is_admin || $is_assigned_tecnico;
 $can_reassign_tecnico = $is_admin;
+// A technician viewing an unassigned repair can claim it for themselves.
+$can_self_assign = $user_role === 'tecnico'
+    && empty($rep['tecnico_id'])
+    && !empty($_SESSION['tecnico_id']);
 $can_change_prioridad = $is_admin;
 $can_devolver_rep = $can_manage_rep;
 $allowed_estado_options = array_values(array_filter($estados_catalogo, function ($estadoItem) use ($rep, $user_role) {
@@ -356,30 +369,59 @@ function getHistorialVisual($accion) {
         overflow-y: auto;
     }
 
-    /* NPU history badge (clickable) */
-    .npu-history-btn {
+    /* Collapsible "Historial del NPU" card */
+    .npu-history-card .card-header {
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.12s;
+    }
+    .npu-history-card .card-header:hover { background: #f8fafc; }
+    .npu-history-card .card-header .toggle-icon {
+        transition: transform 0.2s ease;
+        color: var(--text-muted);
+        font-size: 14px;
+    }
+    .npu-history-card .card-header[aria-expanded="true"] .toggle-icon {
+        transform: rotate(180deg);
+    }
+    .npu-history-card .npu-history-count {
         font-size: 11px;
-        padding: 0.2rem 0.5rem;
-        line-height: 1;
+        font-weight: 700;
         background: #fef3c7;
         color: #b45309;
         border: 1px solid #fcd34d;
         border-radius: 999px;
-        cursor: pointer;
-        font-weight: 700;
+        padding: 1px 7px;
         margin-left: 0.4rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-        transition: all 0.12s;
     }
-    .npu-history-btn:hover {
-        background: #f59e0b;
-        color: #fff;
-        border-color: #f59e0b;
-        transform: scale(1.05);
+    .npu-history-card table {
+        font-size: 12.5px;
+        margin: 0;
     }
-    .npu-history-btn i { font-size: 10px; }
+    .npu-history-card table thead th {
+        background: #f8fafc;
+        color: var(--text-muted);
+        font-size: 10.5px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        padding: 0.4rem 0.6rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .npu-history-card table tbody td {
+        padding: 0.35rem 0.6rem;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+    }
+    .npu-history-card table tbody tr:last-child td { border-bottom: none; }
+    .npu-history-card table tbody tr:hover td { background: #f8fafc; }
+    .npu-history-card tr.urgent-row td { background: #fef2f2 !important; }
+    .npu-history-card .open-link {
+        color: var(--text-muted);
+        text-decoration: none;
+        font-size: 14px;
+    }
+    .npu-history-card .open-link:hover { color: var(--primary-blue); }
 </style>
 
 <div class="detail-shell">
@@ -415,16 +457,7 @@ function getHistorialVisual($accion) {
                         <div class="data-value text-primary fw-bold"><?= e($rep['equipo']) ?> <span class="text-muted fw-normal fst-italic ms-1" style="font-size: 12px;">(<?= e($rep['familia']) ?>)</span></div>
                         
                         <div class="data-label">NPU / Patrimonio</div>
-                        <div class="data-value fw-bold text-dark">
-                            <?= e($rep['npu']) ?: '<span class="text-muted fw-normal fst-italic">N/A</span>' ?>
-                            <?php if ($npuTotalCount > 1): ?>
-                                <button type="button" class="npu-history-btn"
-                                        data-npu="<?= e(trim($rep['npu'])) ?>"
-                                        title="Ver las <?= $npuTotalCount ?> reparaciones de este NPU">
-                                    <i class="bi bi-clock-history"></i><?= $npuTotalCount ?> ingresos
-                                </button>
-                            <?php endif; ?>
-                        </div>
+                        <div class="data-value fw-bold text-dark"><?= e($rep['npu']) ?: '<span class="text-muted fw-normal fst-italic">N/A</span>' ?></div>
                         
                         <div class="data-label">UID</div>
                         <div class="data-value"><?= e($rep['uid']) ?: '<span class="text-muted fst-italic">N/A</span>' ?></div>
@@ -457,6 +490,76 @@ function getHistorialVisual($accion) {
                     </div>
                 </div>
             </div>
+
+            <!-- Historial del NPU (colapsable) -->
+            <?php if ($npuTotalCount > 0):
+                $npuStatusClass = function ($estado) {
+                    $e = strtoupper((string)$estado);
+                    if (strpos($e, 'REPARADO') !== false) return 'status-success';
+                    if (strpos($e, 'SIN REPARACION') !== false) return 'status-danger';
+                    if (strpos($e, 'PEND') !== false) return 'status-warning';
+                    if (strpos($e, 'PRUEBA') !== false) return 'status-info';
+                    return 'status-secondary';
+                };
+            ?>
+            <div class="dense-card npu-history-card">
+                <div class="card-header d-flex justify-content-between align-items-center"
+                     role="button"
+                     data-bs-toggle="collapse"
+                     data-bs-target="#npuHistoryCollapse"
+                     aria-expanded="false"
+                     aria-controls="npuHistoryCollapse">
+                    <h6 class="text-primary m-0">
+                        <i class="bi bi-clock-history me-1"></i>Historial del NPU
+                        <span class="npu-history-count"><?= $npuTotalCount ?> ingreso<?= $npuTotalCount === 1 ? '' : 's' ?> previo<?= $npuTotalCount === 1 ? '' : 's' ?></span>
+                    </h6>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                </div>
+                <div class="collapse" id="npuHistoryCollapse">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 60px;">ID</th>
+                                        <th style="width: 110px;">Fecha</th>
+                                        <th>Equipo</th>
+                                        <th>Sala</th>
+                                        <th>Técnico</th>
+                                        <th>Estado</th>
+                                        <th style="width: 36px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($npuOtrasReparaciones as $hr):
+                                        $isUrg = $hr['urgente'] === 'SI';
+                                    ?>
+                                    <tr<?= $isUrg ? ' class="urgent-row"' : '' ?>>
+                                        <td><strong>#<?= e($hr['id']) ?></strong></td>
+                                        <td class="text-nowrap"><?= formatDatetimeArg($hr['fecha']) ?></td>
+                                        <td><?= e($hr['equipo']) ?></td>
+                                        <td><?= e($hr['sala']) ?></td>
+                                        <td><?= e($hr['tecnico_nombre'] ?: '—') ?></td>
+                                        <td>
+                                            <span class="status-pill <?= $npuStatusClass($hr['estado']) ?>"
+                                                  style="font-size: 10px; padding: 3px 6px; width: auto; min-width: 0;">
+                                                <?= e($hr['estado']) ?>
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <a href="reparacion_detalle.php?id=<?= e($hr['id']) ?>" class="open-link" title="Abrir ficha">
+                                                <i class="bi bi-box-arrow-up-right"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <!-- Observaciones / Comentarios -->
             <div class="dense-card">
@@ -587,6 +690,11 @@ function getHistorialVisual($accion) {
                             <option value="<?= $t['id'] ?>" <?= $rep['tecnico_id'] == $t['id'] ? 'selected' : '' ?>><?= e($t['nombre']) ?></option>
                         <?php endforeach; ?>
                     </select>
+                    <?php elseif ($can_self_assign): ?>
+                        <button type="button" id="btnAutoAsignar" class="btn btn-primary btn-compact w-100 fw-bold shadow-none">
+                            <i class="bi bi-person-check me-1"></i>Asignarme esta reparación
+                        </button>
+                        <div class="text-muted mt-2" style="font-size: 11px;">Pasarás a ser el técnico a cargo y la reparación cambiará a "En Reparación".</div>
                     <?php else: ?>
                         <div class="text-muted" style="font-size: 11px;">Solo administrador puede reasignar.</div>
                     <?php endif; ?>
@@ -617,6 +725,8 @@ const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '
 // Map { "ESTADO_DESTINO": true|false } generated server-side from
 // estadoTransitionRequiresComment() — same source of truth as the API.
 const ESTADO_REQUIERE_COMENTARIO = <?= json_encode($estados_requieren_comentario, JSON_UNESCAPED_UNICODE) ?>;
+const REP_TIENE_TECNICO = <?= !empty($rep['tecnico_id']) ? 'true' : 'false' ?>;
+const SESSION_TECNICO_ID = <?= json_encode($_SESSION['tecnico_id'] ?? null) ?>;
 
 // --- Page loading overlay used during any fetch round-trip ---
 const pageLoading = (() => {
@@ -759,9 +869,20 @@ if (formComentario) {
 
 const selectEstado = document.getElementById('selectEstado');
 if (selectEstado && !selectEstado.disabled) {
+    // Snapshot the current value so we can roll back when validation fails
+    // or the request errors out — avoids a full reload that would kill the toast.
+    const estadoOriginal = selectEstado.value;
+
     selectEstado.addEventListener('change', async (e) => {
         const newEstado = e.target.value;
         let comentario = '';
+
+        // Block transitions that need an owner if the repair has no technician yet
+        if (newEstado.toUpperCase() !== 'PEND. DE REVISION' && !REP_TIENE_TECNICO) {
+            showToast('Asigná un técnico antes de cambiar a este estado.', 'warning');
+            selectEstado.value = estadoOriginal;
+            return;
+        }
 
         if (ESTADO_REQUIERE_COMENTARIO[newEstado]) {
             comentario = await promptModal({
@@ -773,7 +894,7 @@ if (selectEstado && !selectEstado.disabled) {
                 icon: 'bi-arrow-repeat',
             });
             if (comentario === null) {
-                location.reload();
+                selectEstado.value = estadoOriginal;
                 return;
             }
         }
@@ -788,8 +909,8 @@ if (selectEstado && !selectEstado.disabled) {
             reloadPreservingScroll();
         } catch (err) {
             pageLoading.hide();
-            showToast('Error al cambiar estado', 'danger');
-            reloadPreservingScroll();
+            selectEstado.value = estadoOriginal;
+            showToast(err?.message || 'Error al cambiar estado', 'danger');
         }
     });
 }
@@ -810,6 +931,26 @@ if (selectTecnico) {
             pageLoading.hide();
             showToast('Error al cambiar técnico', 'danger');
             reloadPreservingScroll();
+        }
+    });
+}
+
+const btnAutoAsignar = document.getElementById('btnAutoAsignar');
+if (btnAutoAsignar && SESSION_TECNICO_ID) {
+    btnAutoAsignar.addEventListener('click', async () => {
+        btnAutoAsignar.disabled = true;
+        pageLoading.show();
+        try {
+            await fetchApi(`../api/reparacion_tecnico.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                body: JSON.stringify({ id: reparacionId, tecnico_id: SESSION_TECNICO_ID })
+            });
+            reloadPreservingScroll();
+        } catch (err) {
+            pageLoading.hide();
+            btnAutoAsignar.disabled = false;
+            showToast(err?.message || 'Error al asignarte la reparación', 'danger');
         }
     });
 }
@@ -887,145 +1028,5 @@ if (btnDevolverReparacion && !btnDevolverReparacion.disabled) {
         </div>
     </div>
 </div>
-
-<!-- NPU history modal: lists every repair sharing this NPU -->
-<?php if ($npuTotalCount > 1): ?>
-<div class="modal fade" id="npuHistoryModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content" style="border-radius: 10px;">
-            <div class="modal-header py-2 px-3">
-                <h6 class="modal-title fw-bold m-0" style="font-size: 0.9rem;">
-                    <i class="bi bi-clock-history me-1"></i>
-                    Historial del NPU
-                    <code id="npuHistoryNpu" class="ms-1" style="font-size: 0.8rem; background: #f1f5f9; padding: 1px 6px; border-radius: 4px;"></code>
-                </h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body p-0">
-                <div id="npuHistoryLoading" class="text-center py-4 text-muted" style="font-size: 0.85rem;">
-                    <div class="spinner-border spinner-border-sm me-2"></div> Cargando...
-                </div>
-                <div id="npuHistoryEmpty" class="text-center py-4 text-muted" style="font-size: 0.85rem; display: none;">
-                    No se encontraron reparaciones para este NPU.
-                </div>
-                <div id="npuHistoryWrapper" style="display: none;">
-                    <table class="table table-sm mb-0" style="font-size: 0.78rem;">
-                        <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;">
-                            <tr>
-                                <th style="width: 60px; padding: 0.4rem 0.6rem;">ID</th>
-                                <th style="width: 110px; padding: 0.4rem 0.6rem;">Fecha</th>
-                                <th style="padding: 0.4rem 0.6rem;">Equipo</th>
-                                <th style="padding: 0.4rem 0.6rem;">Sala</th>
-                                <th style="padding: 0.4rem 0.6rem;">Técnico</th>
-                                <th style="padding: 0.4rem 0.6rem;">Estado</th>
-                                <th style="width: 50px; padding: 0.4rem 0.6rem;"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="npuHistoryRows"></tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="modal-footer py-2 px-3" style="font-size: 0.75rem;">
-                <span class="text-muted me-auto" id="npuHistoryCount"></span>
-                <button type="button" class="btn btn-sm btn-light border" data-bs-dismiss="modal" style="font-size: 0.75rem; padding: 0.3rem 0.7rem;">Cerrar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-(function () {
-    const currentRepId = <?= (int)$rep['id'] ?>;
-    const modalEl    = document.getElementById('npuHistoryModal');
-    const loadingEl  = document.getElementById('npuHistoryLoading');
-    const emptyEl    = document.getElementById('npuHistoryEmpty');
-    const wrapperEl  = document.getElementById('npuHistoryWrapper');
-    const tbodyEl    = document.getElementById('npuHistoryRows');
-    const npuLabel   = document.getElementById('npuHistoryNpu');
-    const countLabel = document.getElementById('npuHistoryCount');
-    if (!modalEl) return;
-
-    function esc(s) {
-        return String(s ?? '').replace(/[&<>"']/g, c => ({
-            '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
-        })[c]);
-    }
-
-    function statusClass(estado) {
-        const e = (estado || '').toUpperCase();
-        if (e.includes('REPARADO')) return 'status-success';
-        if (e.includes('SIN REPARACION')) return 'status-danger';
-        if (e.includes('PEND')) return 'status-warning';
-        if (e.includes('PRUEBA')) return 'status-info';
-        return 'status-secondary';
-    }
-
-    function showState(state) {
-        loadingEl.style.display = state === 'loading' ? '' : 'none';
-        emptyEl.style.display   = state === 'empty'   ? '' : 'none';
-        wrapperEl.style.display = state === 'data'    ? '' : 'none';
-    }
-
-    async function openNpuHistory(npu) {
-        npuLabel.textContent = npu;
-        countLabel.textContent = '';
-        tbodyEl.innerHTML = '';
-        showState('loading');
-        bootstrap.Modal.getOrCreateInstance(modalEl).show();
-
-        try {
-            const res = await fetch('../api/reparaciones_por_npu.php?npu=' + encodeURIComponent(npu));
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            const data = await res.json();
-            const reps = data.reparaciones || [];
-
-            if (reps.length === 0) {
-                showState('empty');
-                return;
-            }
-
-            tbodyEl.innerHTML = reps.map(r => {
-                const isCurrent = parseInt(r.id, 10) === currentRepId;
-                const rowStyle = [];
-                if (r.urgente === 'SI') rowStyle.push('background: #fef2f2');
-                if (isCurrent) rowStyle.push('background: #eff6ff; font-weight: 600');
-                const styleAttr = rowStyle.length ? ` style="${rowStyle.join('; ')}"` : '';
-                const idCell = isCurrent
-                    ? `<strong>#${esc(r.id)}</strong> <span class="badge bg-primary" style="font-size: 9px; padding: 1px 4px;">ACTUAL</span>`
-                    : `<strong>#${esc(r.id)}</strong>`;
-                const lastCell = isCurrent
-                    ? `<span class="text-muted" style="font-size: 11px;">—</span>`
-                    : `<a href="reparacion_detalle.php?id=${esc(r.id)}" class="text-decoration-none" title="Abrir ficha"><i class="bi bi-box-arrow-up-right"></i></a>`;
-                return `
-                    <tr${styleAttr}>
-                        <td style="padding: 0.35rem 0.6rem;">${idCell}</td>
-                        <td style="padding: 0.35rem 0.6rem; white-space: nowrap;">${esc(r.fecha_fmt)}</td>
-                        <td style="padding: 0.35rem 0.6rem;">${esc(r.equipo)}</td>
-                        <td style="padding: 0.35rem 0.6rem;">${esc(r.sala)}</td>
-                        <td style="padding: 0.35rem 0.6rem;">${esc(r.tecnico_nombre || '—')}</td>
-                        <td style="padding: 0.35rem 0.6rem;"><span class="status-pill ${statusClass(r.estado)}" style="font-size: 10px; padding: 3px 6px; text-transform: uppercase; width: auto;">${esc(r.estado)}</span></td>
-                        <td style="padding: 0.35rem 0.6rem; text-align: center;">${lastCell}</td>
-                    </tr>
-                `;
-            }).join('');
-
-            countLabel.textContent = `${reps.length} ingreso${reps.length === 1 ? '' : 's'} para este NPU`;
-            showState('data');
-        } catch (e) {
-            console.error('Error loading NPU history', e);
-            emptyEl.textContent = 'Error al cargar el historial. Intentá nuevamente.';
-            showState('empty');
-        }
-    }
-
-    document.addEventListener('click', (e) => {
-        const btn = e.target.closest('.npu-history-btn');
-        if (!btn) return;
-        e.preventDefault();
-        openNpuHistory(btn.dataset.npu);
-    });
-})();
-</script>
-<?php endif; ?>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

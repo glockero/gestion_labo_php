@@ -43,7 +43,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             if ($nombre !== '' && $lab !== '') {
                 $nombre = $nombre . ' (LAB' . (int)$lab . ')';
             }
-            $extra = ['valor' => $_POST['extra'] ?? null, 'lab' => $lab];
+            $extra = [
+                'valor' => $_POST['extra'] ?? null,
+                'lab' => $lab,
+                'familia' => $_POST['familia'] ?? null,
+            ];
         }
         if ($labConflict) {
             setFlashMessage('danger', "El LAB {$labConflict['lab']} ya está asignado a \"{$labConflict['nombre']}\". Elegí otro número.");
@@ -65,7 +69,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             if ($nombre !== '' && $lab !== '') {
                 $nombre = $nombre . ' (LAB' . (int)$lab . ')';
             }
-            $extra = ['valor' => $_POST['extra'] ?? null, 'lab' => $lab];
+            $extra = [
+                'valor' => $_POST['extra'] ?? null,
+                'lab' => $lab,
+                'familia' => $_POST['familia'] ?? null,
+            ];
         }
         if ($labConflict) {
             setFlashMessage('danger', "El LAB {$labConflict['lab']} ya está asignado a \"{$labConflict['nombre']}\". Elegí otro número.");
@@ -99,6 +107,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
         }
         adminRedirect("/configuracion.php?tab=$tipo");
+    } elseif ($action === 'bulk_update_equipos') {
+        $ids = $_POST['ids'] ?? [];
+        if (!is_array($ids) || empty($ids)) {
+            setFlashMessage('danger', 'No se seleccionaron equipos.');
+            adminRedirect('/configuracion.php?tab=equipos');
+        }
+        $updates = [];
+        if (array_key_exists('familia', $_POST)) {
+            $updates['familia'] = $_POST['familia'];
+        }
+        if (empty($updates)) {
+            setFlashMessage('danger', 'No se indicó qué campo actualizar.');
+            adminRedirect('/configuracion.php?tab=equipos');
+        }
+        $n = CatalogoModel::bulkUpdateEquipos($ids, $updates);
+        registrarHistorial('CATALOGO_BULK_UPDATE', "Bulk update sobre $n equipos: " . json_encode($updates, JSON_UNESCAPED_UNICODE));
+        setFlashMessage('success', "Se actualizaron $n equipo(s).");
+        adminRedirect('/configuracion.php?tab=equipos');
     } elseif ($action === 'toggle_tecnico') {
         $id = (int)($_POST['id'] ?? 0);
         $registro = CatalogoModel::getById('tecnicos', $id);
@@ -123,9 +149,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             setFlashMessage('danger', 'Usuario y contraseña son obligatorios.');
         } else {
             try {
-                UsuarioModel::create($username, $password, $rol, $tecnicoId, $activo);
-                registrarHistorial('USUARIO_CREAR', "Se creó el usuario $username con rol $rol.");
-                setFlashMessage('success', 'Usuario creado correctamente.');
+                // If a soft-deleted user exists with the same name, revive it
+                // (preserves id + history) instead of failing on UNIQUE.
+                $existente = UsuarioModel::getByUsernameIncludingDeleted($username);
+                if ($existente && !empty($existente['deleted_at'])) {
+                    UsuarioModel::reviveByUsername($username, $password, $rol, $tecnicoId, $activo);
+                    registrarHistorial('USUARIO_REVIVIR', "Se restauró el usuario eliminado $username con rol $rol.");
+                    setFlashMessage('success', "Se restauró el usuario eliminado '$username' con los nuevos datos.");
+                } else {
+                    UsuarioModel::create($username, $password, $rol, $tecnicoId, $activo);
+                    registrarHistorial('USUARIO_CREAR', "Se creó el usuario $username con rol $rol.");
+                    setFlashMessage('success', 'Usuario creado correctamente.');
+                }
             } catch (InvalidArgumentException $e) {
                 setFlashMessage('danger', $e->getMessage());
             } catch (PDOException $e) {
@@ -587,6 +622,44 @@ require_once __DIR__ . '/../public/includes/header.php';
     font-style: italic;
 }
 
+/* Bulk action bar for Equipos — appears when one or more rows are selected */
+.bulk-action-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    padding: 0.55rem 0.9rem;
+    background: #eff6ff;
+    border-bottom: 1px solid #bfdbfe;
+    font-size: 12px;
+}
+.bulk-action-bar .bulk-count {
+    color: #1d4ed8;
+    font-weight: 700;
+}
+.bulk-action-bar .bulk-label {
+    color: var(--text-muted);
+    font-weight: 600;
+}
+.bulk-action-bar select,
+.bulk-action-bar button {
+    font-size: 11.5px;
+}
+.bulk-action-bar select {
+    height: 28px;
+    padding: 0 1.3rem 0 0.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background: #fff;
+    min-width: 140px;
+}
+.bulk-check, .bulk-check-all {
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+    accent-color: #2563eb;
+}
+
 /* Catalog list card shrinks to fit its content (avoids dead space when the
    table only has a few narrow columns). Falls back to 100% on small screens. */
 .catalog-list-card {
@@ -903,6 +976,15 @@ require_once __DIR__ . '/../public/includes/header.php';
                                     </div>
                                     <?php if ($tab === 'equipos'): ?>
                                     <div>
+                                        <label class="form-label">Familia</label>
+                                        <select name="familia" class="form-select">
+                                            <option value="">-- Sin familia --</option>
+                                            <?php foreach ($familias as $f): ?>
+                                                <option value="<?= e($f['nombre']) ?>"><?= e($f['nombre']) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <div>
                                         <label class="form-label">Valor</label>
                                         <input type="text" name="extra" class="form-control" placeholder="Opcional">
                                     </div>
@@ -934,6 +1016,25 @@ require_once __DIR__ . '/../public/includes/header.php';
                                     </button>
                                 </div>
                                 <?php endif; ?>
+                                <?php if ($tab === 'equipos'): ?>
+                                <div class="bulk-action-bar" id="bulkBar" style="display: none;">
+                                    <span><span class="bulk-count" id="bulkCount">0</span> equipos seleccionados</span>
+                                    <span class="bulk-label">·</span>
+                                    <label class="bulk-label m-0">Asignar familia:</label>
+                                    <select id="bulkFamilia">
+                                        <option value="">-- Sin familia --</option>
+                                        <?php foreach ($familias as $f): ?>
+                                            <option value="<?= e($f['nombre']) ?>"><?= e($f['nombre']) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <button type="button" class="btn btn-sm btn-primary" id="bulkApply">
+                                        <i class="bi bi-check2"></i> Aplicar
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-light border" id="bulkClear">
+                                        Limpiar selección
+                                    </button>
+                                </div>
+                                <?php endif; ?>
                                 <div class="catalog-table-scroll">
                                 <table class="table dense-table mb-0" id="catalogTable">
                                         <thead>
@@ -943,8 +1044,12 @@ require_once __DIR__ . '/../public/includes/header.php';
                                                 <th class="text-center" style="width: 110px;">Estado</th>
                                                 <th class="text-center" style="width: 90px;" title="Reparaciones activas asignadas">Activas</th>
                                                 <?php elseif (in_array($tab, ['salas', 'equipos', 'familias'], true)): ?>
+                                                <?php if ($tab === 'equipos'): ?>
+                                                <th style="width: 32px;"><input type="checkbox" class="bulk-check-all" id="bulkCheckAll" title="Seleccionar todos"></th>
+                                                <?php endif; ?>
                                                 <th class="cat-name-cell">Nombre</th>
                                                 <?php if ($tab === 'equipos'): ?>
+                                                <th style="width: 130px;">Familia</th>
                                                 <th>Valor</th>
                                                 <?php endif; ?>
                                                 <th class="text-center" style="width: 80px;" title="Reparaciones que referencian este nombre">REP.</th>
@@ -965,6 +1070,9 @@ require_once __DIR__ . '/../public/includes/header.php';
                                                 $searchKey = mb_strtolower($d['nombre'], 'UTF-8');
                                             ?>
                                             <tr data-nombre="<?= e($searchKey) ?>"<?= $tab === 'tecnicos' && !$isActivo ? ' class="table-secondary text-muted"' : '' ?>>
+                                                <?php if ($tab === 'equipos'): ?>
+                                                <td class="text-center"><input type="checkbox" class="bulk-check" value="<?= e($d['id']) ?>"></td>
+                                                <?php endif; ?>
                                                 <td class="cat-name-cell">
                                                     <div class="fw-bold" title="<?= e($d['nombre']) ?>"><?= e($d['nombre']) ?></div>
                                                     <?php if (!$hideId): ?>
@@ -988,6 +1096,13 @@ require_once __DIR__ . '/../public/includes/header.php';
                                                 </td>
                                                 <?php elseif (in_array($tab, ['salas','equipos','familias'], true)): ?>
                                                     <?php if ($tab === 'equipos'): ?>
+                                                    <td class="text-muted">
+                                                        <?php if (!empty($d['familia'])): ?>
+                                                            <?= e($d['familia']) ?>
+                                                        <?php else: ?>
+                                                            <span class="text-muted fst-italic" style="font-size: 0.75rem;">—</span>
+                                                        <?php endif; ?>
+                                                    </td>
                                                     <td class="text-muted" style="white-space: nowrap;"><?= e(formatArs($d['valor']) ?: '—') ?></td>
                                                     <?php endif; ?>
                                                     <td class="text-center">
@@ -1021,6 +1136,7 @@ require_once __DIR__ . '/../public/includes/header.php';
                                                                 data-nombre="<?= e($nombreClean) ?>"
                                                                 data-valor="<?= e($d['valor'] ?? '') ?>"
                                                                 data-lab="<?= e($d['lab'] ?? '') ?>"
+                                                                data-familia="<?= e($d['familia'] ?? '') ?>"
                                                                 data-activo="<?= $isActivo ? '1' : '0' ?>"
                                                                 title="Editar">
                                                             <i class="bi bi-pencil" style="font-size: 0.75rem;"></i>
@@ -1194,6 +1310,15 @@ require_once __DIR__ . '/../public/includes/header.php';
                 </div>
                 <?php if ($tab === 'equipos'): ?>
                 <div class="dense-form">
+                    <label class="form-label">Familia</label>
+                    <select name="familia" id="catEditFamilia" class="form-select">
+                        <option value="">-- Sin familia --</option>
+                        <?php foreach ($familias as $f): ?>
+                            <option value="<?= e($f['nombre']) ?>"><?= e($f['nombre']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="dense-form">
                     <label class="form-label">Valor</label>
                     <input type="text" name="extra" id="catEditExtra" class="form-control" maxlength="100" placeholder="Opcional">
                 </div>
@@ -1249,6 +1374,8 @@ require_once __DIR__ . '/../public/includes/header.php';
             if (extraInput) extraInput.value = btn.dataset.valor || '';
             const labInput = document.getElementById('catEditLab');
             if (labInput) labInput.value = btn.dataset.lab || '';
+            const familiaInput = document.getElementById('catEditFamilia');
+            if (familiaInput) familiaInput.value = btn.dataset.familia || '';
             const activoInput = document.getElementById('catEditActivo');
             if (activoInput) activoInput.checked = btn.dataset.activo === '1';
             bootstrap.Modal.getOrCreateInstance(modalEl).show();
@@ -1300,6 +1427,79 @@ require_once __DIR__ . '/../public/includes/header.php';
             bootstrap.Modal.getOrCreateInstance(modalEl).show();
         }
     });
+
+    // --- Bulk actions for equipos ---
+    (function () {
+        const bulkBar = document.getElementById('bulkBar');
+        if (!bulkBar) return;
+        const bulkCount   = document.getElementById('bulkCount');
+        const checkAll    = document.getElementById('bulkCheckAll');
+        const applyBtn    = document.getElementById('bulkApply');
+        const clearBtn    = document.getElementById('bulkClear');
+        const familiaSel  = document.getElementById('bulkFamilia');
+
+        function visibleChecks() {
+            return Array.from(document.querySelectorAll('.bulk-check'))
+                .filter(cb => cb.closest('tr').style.display !== 'none');
+        }
+        function selectedChecks() {
+            return Array.from(document.querySelectorAll('.bulk-check:checked'));
+        }
+        function refresh() {
+            const sel = selectedChecks();
+            bulkCount.textContent = sel.length;
+            bulkBar.style.display = sel.length > 0 ? '' : 'none';
+            // Master state reflects visible rows
+            const vis = visibleChecks();
+            if (checkAll) {
+                const allChecked = vis.length > 0 && vis.every(cb => cb.checked);
+                checkAll.checked = allChecked;
+                checkAll.indeterminate = !allChecked && sel.length > 0;
+            }
+        }
+
+        if (checkAll) {
+            checkAll.addEventListener('change', () => {
+                visibleChecks().forEach(cb => cb.checked = checkAll.checked);
+                refresh();
+            });
+        }
+        document.querySelectorAll('.bulk-check').forEach(cb => cb.addEventListener('change', refresh));
+
+        clearBtn?.addEventListener('click', () => {
+            document.querySelectorAll('.bulk-check').forEach(cb => cb.checked = false);
+            refresh();
+        });
+
+        applyBtn?.addEventListener('click', () => {
+            const ids = selectedChecks().map(cb => cb.value);
+            if (!ids.length) return;
+            const familia = familiaSel.value;
+            const label = familia || '(sin familia)';
+            if (!confirm(`Aplicar familia "${label}" a ${ids.length} equipo(s)?`)) return;
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '';
+            const append = (name, value) => {
+                const i = document.createElement('input');
+                i.type = 'hidden'; i.name = name; i.value = value;
+                form.appendChild(i);
+            };
+            append('csrf_token', CSRF_CAT);
+            append('action', 'bulk_update_equipos');
+            append('familia', familia);
+            ids.forEach(id => append('ids[]', id));
+            document.body.appendChild(form);
+            form.submit();
+        });
+
+        // Re-run after search filter shows/hides rows
+        const catSearchInput = document.getElementById('catalogSearch');
+        catSearchInput?.addEventListener('input', () => requestAnimationFrame(refresh));
+
+        refresh();
+    })();
 
     // --- Live LAB uniqueness check (equipos only) ---
     function attachLabCheck(input, warnBox, getExcludeId) {

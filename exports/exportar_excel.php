@@ -35,9 +35,13 @@ if ($estado_filtro) {
 
 $reparaciones = ReparacionModel::getList($filtros, 999999, 0);
 
+// "Ahorro" column is added when exporting the Reparados tab — that's where
+// the equipo's catalog value carries operational meaning.
+$incluirAhorro = strtoupper($estado_actual) === 'REPARADOS';
+
 $rows = [];
 foreach ($reparaciones as $rep) {
-    $rows[] = [
+    $row = [
         $rep['id'],
         $rep['fecha'],
         $rep['sala'],
@@ -50,13 +54,23 @@ foreach ($reparaciones as $rep) {
         $rep['estado'],
         $rep['fecha_en_reparacion'],
         $rep['fecha_reparado'],
-        str_replace(["\r", "\n"], ' ', (string) $rep['observaciones']),
     ];
+    if ($incluirAhorro) {
+        // equipo_valor is COALESCE(valor_ahorrado, ec.valor) — already
+        // numeric for stamped repairs, free-text for the catalog fallback.
+        $row[] = parseArsToFloat($rep['equipo_valor'] ?? null) ?? '';
+    }
+    $row[] = str_replace(["\r", "\n"], ' ', (string) $rep['observaciones']);
+    $rows[] = $row;
 }
+
+$headers = [
+    'ID', 'Fecha Ingreso', 'Sala', 'UID', 'NPU', 'Familia', 'Equipo',
+    'Urgente', 'Técnico', 'Estado', 'Fecha En Rep.', 'Fecha Reparado',
+];
+if ($incluirAhorro) $headers[] = 'Ahorro';
+$headers[] = 'Observaciones';
 
 $filename = 'reparaciones_' . date('Ymd_His') . '.xlsx';
 
-XlsxBuilder::output($filename, 'Reparaciones', [
-    'ID', 'Fecha Ingreso', 'Sala', 'UID', 'NPU', 'Familia', 'Equipo', 
-    'Urgente', 'Técnico', 'Estado', 'Fecha En Rep.', 'Fecha Reparado', 'Observaciones'
-], $rows);
+XlsxBuilder::output($filename, 'Reparaciones', $headers, $rows);

@@ -1,15 +1,24 @@
 <?php
 // app/ReparacionModel.php
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/CatalogoModel.php';
 
 class ReparacionModel {
     public static function getList($filtros = [], $limit = 50, $offset = 0) {
+        CatalogoModel::ensureReparacionesSchema();
         $pdo = getDbConnection();
         $params = [];
 
-        $sql = "SELECT r.*, COALESCE(t.nombre, r.tecnico_nombre_historico) AS tecnico_nombre
+        // Join equipos_catalogo by name as a fallback when r.valor_ahorrado is
+        // NULL (reparation in progress, not yet stamped). For completed
+        // repairs we always use r.valor_ahorrado — the catalog value at the
+        // time of completion, immune to later edits in Sistema > Equipos.
+        $sql = "SELECT r.*,
+                       COALESCE(t.nombre, r.tecnico_nombre_historico) AS tecnico_nombre,
+                       COALESCE(r.valor_ahorrado, ec.valor) AS equipo_valor
                 FROM reparaciones r
-                LEFT JOIN tecnicos t ON r.tecnico_id = t.id";
+                LEFT JOIN tecnicos t ON r.tecnico_id = t.id
+                LEFT JOIN equipos_catalogo ec ON ec.nombre = r.equipo";
 
         $where = self::buildWhereClauses($filtros, $params);
 

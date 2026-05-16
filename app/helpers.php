@@ -39,6 +39,24 @@ function getCurrentDatetime() {
 }
 
 /**
+ * Parse a free-text monetary value into a float, or null when not parseable.
+ * Accepts "1234.56", "1234,56", "1.234,56" and prefixes like "$ ".
+ */
+function parseArsToFloat($value) {
+    if ($value === null) return null;
+    $s = trim((string)$value);
+    if ($s === '') return null;
+    $clean = str_replace(['$', ' '], '', $s);
+    if (strpos($clean, ',') !== false && strpos($clean, '.') !== false) {
+        $clean = str_replace('.', '', $clean);
+        $clean = str_replace(',', '.', $clean);
+    } elseif (strpos($clean, ',') !== false) {
+        $clean = str_replace(',', '.', $clean);
+    }
+    return is_numeric($clean) ? (float)$clean : null;
+}
+
+/**
  * Format a free-text monetary value as Argentine pesos ("$ 1.234,56").
  * Accepts plain numbers ("1234.56", "1234"), Spanish-formatted strings
  * ("1.234,56"), and already-prefixed values ("$ 1234"). Returns the
