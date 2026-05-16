@@ -31,9 +31,13 @@ $anio_filtro = $_GET['f_anio'] ?? '';
 $mes_filtro = $_GET['f_mes'] ?? '';
 $dia_filtro = $_GET['f_dia'] ?? '';
 $diasemana_filtro = $_GET['f_diasemana'] ?? '';
+$solo_urgentes = !empty($_GET['solo_urgentes']);
 
 $page = max(1, (int)($_GET['page'] ?? 1));
-$limit = 50;
+$per_page_allowed = [25, 50, 100, 200];
+$per_page = (int)($_GET['per_page'] ?? 50);
+if (!in_array($per_page, $per_page_allowed, true)) $per_page = 50;
+$limit = $per_page;
 $offset = ($page - 1) * $limit;
 
 $filtros = [
@@ -45,7 +49,8 @@ $filtros = [
     'f_anio' => $anio_filtro,
     'f_mes' => $mes_filtro,
     'f_dia' => $dia_filtro,
-    'f_diasemana' => $diasemana_filtro
+    'f_diasemana' => $diasemana_filtro,
+    'solo_urgentes' => $solo_urgentes,
 ];
 
 if ($estado_filtro) {
@@ -60,24 +65,51 @@ $salas = CatalogoModel::getAll('salas');
 $tecnicos = CatalogoModel::getAll('tecnicos');
 $estados = CatalogoModel::getAll('estados');
 
+$meses = ['01'=>'Enero', '02'=>'Febrero', '03'=>'Marzo', '04'=>'Abril', '05'=>'Mayo', '06'=>'Junio', '07'=>'Julio', '08'=>'Agosto', '09'=>'Septiembre', '10'=>'Octubre', '11'=>'Noviembre', '12'=>'Diciembre'];
+$dias_semana = ['0'=>'Domingo', '1'=>'Lunes', '2'=>'Martes', '3'=>'Miércoles', '4'=>'Jueves', '5'=>'Viernes', '6'=>'Sábado'];
+
+// Helper: build current URL minus a single filter param (preserves the rest)
+function urlSinFiltro($param) {
+    $q = $_GET;
+    unset($q[$param]);
+    $q['page'] = 1;
+    return '?' . http_build_query($q);
+}
+
+// Build the list of active filters (label + value + key to remove)
+$tecnicoNombreMap = array_column($tecnicos, 'nombre', 'id');
+$active_filters = [];
+if ($busqueda !== '')         $active_filters[] = ['key'=>'q',          'label'=>'Búsqueda', 'value'=>$busqueda];
+if ($sala_filtro !== '')      $active_filters[] = ['key'=>'f_sala',     'label'=>'Sala',     'value'=>$sala_filtro];
+if ($tecnico_filtro !== '') {
+    $tecVal = $tecnico_filtro === 'SIN_ASIGNAR'
+        ? 'Sin asignar'
+        : ($tecnicoNombreMap[$tecnico_filtro] ?? "ID $tecnico_filtro");
+    $active_filters[] = ['key'=>'f_tecnico',  'label'=>'Técnico',  'value'=>$tecVal];
+}
+if ($estado_filtro !== '')    $active_filters[] = ['key'=>'f_estado',   'label'=>'Estado',   'value'=>$estado_filtro];
+if ($anio_filtro !== '')      $active_filters[] = ['key'=>'f_anio',     'label'=>'Año',      'value'=>$anio_filtro];
+if ($mes_filtro !== '')       $active_filters[] = ['key'=>'f_mes',      'label'=>'Mes',      'value'=>$meses[$mes_filtro] ?? $mes_filtro];
+if ($dia_filtro !== '')       $active_filters[] = ['key'=>'f_dia',      'label'=>'Día',      'value'=>$dia_filtro];
+if ($diasemana_filtro !== '') $active_filters[] = ['key'=>'f_diasemana','label'=>'Día sem.', 'value'=>$dias_semana[$diasemana_filtro] ?? $diasemana_filtro];
+if ($solo_urgentes)           $active_filters[] = ['key'=>'solo_urgentes','label'=>'Urgencia', 'value'=>'Solo urgentes'];
+
 $pdo = getDbConnection();
 $anios_opt = $pdo->query("SELECT DISTINCT YEAR(fecha) as anio FROM reparaciones WHERE fecha IS NOT NULL ORDER BY anio DESC")->fetchAll();
 
-$tab_counts = [];
-foreach (array_keys($tabs_estado) as $tab_key) {
-    $f_temp = $filtros;
-    $f_temp['estado'] = $tab_key;
-    unset($f_temp['estado_exacto']);
-    $tab_counts[$tab_key] = ReparacionModel::getCount($f_temp);
-}
+$tab_counts = ReparacionModel::getTabCounts($filtros);
 
+// Map of [npu => total_ingresos] for NPUs that appear more than once across
+// the whole repairs table. Only NPUs present in the current page are queried.
 $npus_repetidos = [];
 $npu_list = array_filter(array_column($reparaciones, 'npu'));
 if (count($npu_list) > 0) {
     $in = str_repeat('?,', count($npu_list) - 1) . '?';
-    $stmtN = $pdo->prepare("SELECT npu FROM reparaciones WHERE npu IN ($in) GROUP BY npu HAVING COUNT(*) > 1");
+    $stmtN = $pdo->prepare("SELECT npu, COUNT(*) AS cnt FROM reparaciones WHERE npu IN ($in) GROUP BY npu HAVING COUNT(*) > 1");
     $stmtN->execute(array_values($npu_list));
-    $npus_repetidos = $stmtN->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($stmtN->fetchAll() as $row) {
+        $npus_repetidos[$row['npu']] = (int)$row['cnt'];
+    }
 }
 
 ?>
@@ -103,36 +135,36 @@ if (count($npu_list) > 0) {
     .dashboard-header {
         background: #fff;
         border-radius: 8px;
-        padding: 0.75rem 1rem;
+        padding: 0.5rem 0.75rem;
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
         border: 1px solid var(--border-color);
-        margin-bottom: 1rem;
+        margin-bottom: 0.75rem;
     }
 
     .search-input-wrapper {
         position: relative;
         flex-grow: 1;
     }
-    
+
     .search-input-wrapper .bi-search {
         position: absolute;
-        left: 0.75rem;
+        left: 0.6rem;
         top: 50%;
         transform: translateY(-50%);
         color: #9ca3af;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
     }
 
     .search-input {
-        padding-left: 2.25rem;
+        padding-left: 1.9rem;
         border-radius: 6px;
-        height: 40px;
-        font-size: 14px;
+        height: 32px;
+        font-size: 12.5px;
         border: 1px solid #d1d5db;
         background-color: var(--bg-light);
         transition: all 0.15s;
     }
-    
+
     .search-input:focus {
         background-color: #fff;
         border-color: var(--primary-blue);
@@ -140,9 +172,9 @@ if (count($npu_list) > 0) {
     }
 
     .dashboard-header .btn {
-        height: 40px;
-        padding: 0 1.25rem;
-        font-size: 13px;
+        height: 32px;
+        padding: 0 0.85rem;
+        font-size: 12px;
         display: inline-flex;
         align-items: center;
         border-radius: 6px;
@@ -152,20 +184,20 @@ if (count($npu_list) > 0) {
 
     /* Compact Filter Cards */
     .filter-group-title {
-        font-size: 12px;
+        font-size: 10.5px;
         font-weight: 700;
         color: var(--text-muted);
-        margin-bottom: 0.15rem;
+        margin-bottom: 0.1rem;
         text-transform: uppercase;
-        letter-spacing: 0.02em;
+        letter-spacing: 0.03em;
     }
 
     .filter-select {
-        height: 38px;
-        font-size: 13px;
+        height: 30px;
+        font-size: 12px;
         border-radius: 6px;
         border-color: #d1d5db;
-        padding: 0 1.5rem 0 0.5rem;
+        padding: 0 1.4rem 0 0.45rem;
         background-color: var(--bg-light);
     }
 
@@ -202,21 +234,40 @@ if (count($npu_list) > 0) {
         border-color: transparent;
     }
     
-    .nav-tab-custom[data-estado="URGENTES"] { 
-        background-color: #ef4444; 
+    /* URGENTES inactive: red-tinted outline so it still stands out among neutral tabs */
+    .nav-tab-custom[data-estado="URGENTES"] {
+        background-color: #fef2f2;
+        color: #b91c1c;
+        border-color: #fecaca;
+    }
+
+    .nav-tab-custom[data-estado="URGENTES"]:hover {
+        background-color: #fee2e2;
+        color: #991b1b;
+        border-color: #fca5a5;
+    }
+
+    .nav-tab-custom[data-estado="URGENTES"].active {
+        background-color: #ef4444;
         color: #fff;
         border-color: #ef4444;
     }
-    
-    .nav-tab-custom[data-estado="URGENTES"]:hover {
+
+    .nav-tab-custom[data-estado="URGENTES"].active:hover {
         background-color: #dc2626;
         color: #fff;
+        border-color: #dc2626;
     }
 
-    .nav-tab-custom[data-estado="URGENTES"] .badge { 
-        color: #dc2626 !important; 
-        background: rgba(255,255,255,0.9) !important; 
-        font-weight: 700; 
+    .nav-tab-custom[data-estado="URGENTES"] .badge {
+        color: #b91c1c !important;
+        background: #fee2e2 !important;
+        font-weight: 700;
+    }
+
+    .nav-tab-custom[data-estado="URGENTES"].active .badge {
+        color: #dc2626 !important;
+        background: rgba(255, 255, 255, 0.9) !important;
     }
 
     .nav-tab-custom[data-estado="PEND_REPARACION"].active { background-color: #2563eb; }
@@ -236,9 +287,19 @@ if (count($npu_list) > 0) {
 
     .nav-tab-custom[data-estado="TODAS"].active { background-color: #f97316; }
     .nav-tab-custom[data-estado="TODAS"].active .badge { color: #ea580c !important; background: rgba(255,255,255,0.9) !important; font-weight: 700; }
-    
+
     .nav-tab-custom[data-estado="MIS_REPARACIONES"].active { background-color: #0ea5e9; }
     .nav-tab-custom[data-estado="MIS_REPARACIONES"].active .badge { color: #0284c7 !important; background: rgba(255,255,255,0.9) !important; font-weight: 700; }
+
+    /* Color the icon of each tab to its category so inactive tabs still hint
+       at their meaning instead of being a uniform gray row. */
+    .nav-tab-custom[data-estado="PEND_REPARACION"]:not(.active)  .bi { color: #2563eb; }
+    .nav-tab-custom[data-estado="EN_REPARACION"]:not(.active)    .bi { color: #7c3aed; }
+    .nav-tab-custom[data-estado="REPARADOS"]:not(.active)        .bi { color: #16a34a; }
+    .nav-tab-custom[data-estado="PENDIENTES"]:not(.active)       .bi { color: #d97706; }
+    .nav-tab-custom[data-estado="SIN_REPARACION"]:not(.active)   .bi { color: #64748b; }
+    .nav-tab-custom[data-estado="TODAS"]:not(.active)            .bi { color: #f97316; }
+    .nav-tab-custom[data-estado="MIS_REPARACIONES"]:not(.active) .bi { color: #0ea5e9; }
 
     .nav-tab-custom .badge {
         font-size: 12px;
@@ -258,9 +319,14 @@ if (count($npu_list) > 0) {
     }
 
     .table-scroll {
-        max-height: calc(100vh - 330px);
+        max-height: calc(100vh - 360px);
         overflow-y: auto;
         overflow-x: auto;
+    }
+    /* When the active-filters chip bar is hidden, reclaim its ~50px so one
+       more row becomes visible without making the page scroll. */
+    .table-scroll.no-chips {
+        max-height: calc(100vh - 310px);
     }
 
     .custom-table {
@@ -277,8 +343,8 @@ if (count($npu_list) > 0) {
         vertical-align: middle;
     }
 
-    .col-ingreso { width: 90px; }
-    .col-identif { width: 130px; }
+    .col-ingreso { width: 95px; white-space: nowrap; }
+    .col-identif { width: 140px; white-space: nowrap; }
     .col-equipo { width: 220px; }
     .col-tecnico { width: 140px; }
     .col-estado { width: 140px; }
@@ -367,6 +433,11 @@ if (count($npu_list) > 0) {
         gap: 3px;
         line-height: 1.25;
     }
+    .identificacion-cell > div {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
 
     .identificacion-cell .cell-label {
         color: #64748b;
@@ -384,15 +455,32 @@ if (count($npu_list) > 0) {
     .cell-equipo .sala { font-size: 13px; color: var(--text-muted); margin-top: 1px; }
 
     .tech-avatar {
-        width: 20px;
-        height: 20px;
-        font-size: 10px;
+        width: 22px;
+        height: 22px;
+        font-size: 10.5px;
+        font-weight: 700;
         background-color: #cbd5e1;
         color: #fff;
         border-radius: 50%;
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        flex-shrink: 0;
+    }
+
+    /* Urgent rows: full red outline so they stand out at a glance */
+    .urgent-row td {
+        background: #fef2f2 !important;
+        box-shadow: inset 0 1px 0 0 #ef4444, inset 0 -1px 0 0 #ef4444;
+    }
+    .urgent-row td:first-child {
+        box-shadow: inset 4px 0 0 0 #ef4444, inset 0 1px 0 0 #ef4444, inset 0 -1px 0 0 #ef4444;
+    }
+    .urgent-row td:last-child {
+        box-shadow: inset -1px 0 0 0 #ef4444, inset 0 1px 0 0 #ef4444, inset 0 -1px 0 0 #ef4444;
+    }
+    .urgent-row:hover td {
+        background: #fee2e2 !important;
     }
     
     .cell-tech { font-size: 13px; font-weight: 500; }
@@ -458,18 +546,128 @@ if (count($npu_list) > 0) {
     .action-btn.text-primary:hover { color: var(--primary-blue); border-color: var(--primary-blue); }
     .action-btn.text-danger:hover { color: #dc2626; border-color: #dc2626; }
 
-    .urgency-badge {
+    /* Active filter chips */
+    .active-filters {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.75rem;
+        padding: 0.45rem 0.75rem;
+        background: #f8fafc;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+    }
+    .active-filters .af-label {
         font-size: 11px;
-        padding: 0.1rem 0.3rem;
-        border-radius: 3px;
-        background-color: #fee2e2;
-        color: #b91c1c;
         font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-right: 0.2rem;
+    }
+    .filter-chip {
         display: inline-flex;
         align-items: center;
-        gap: 2px;
-        margin-top: 2px;
+        gap: 0.35rem;
+        padding: 0.18rem 0.4rem 0.18rem 0.65rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 999px;
+        background: #fff;
+        font-size: 12px;
+        color: #334155;
+        line-height: 1.2;
     }
+    .filter-chip strong {
+        font-weight: 700;
+        color: #0f172a;
+        max-width: 180px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .filter-chip .chip-remove {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #f1f5f9;
+        color: #64748b;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        font-size: 12px;
+        line-height: 1;
+        padding: 0;
+        font-weight: 700;
+        transition: all 0.12s;
+    }
+    .filter-chip .chip-remove:hover {
+        background: #ef4444;
+        color: #fff;
+    }
+    .active-filters .clear-all {
+        font-size: 12px;
+        color: #ef4444;
+        text-decoration: none;
+        font-weight: 600;
+        margin-left: auto;
+    }
+    .active-filters .clear-all:hover { text-decoration: underline; }
+
+    /* Per-page selector in the footer */
+    .per-page-select {
+        height: 28px;
+        font-size: 12px;
+        padding: 0 1.5rem 0 0.5rem;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        background: #fff;
+    }
+
+    /* NPU history badge (clickable) */
+    .npu-history-btn {
+        transition: all 0.12s;
+    }
+    .npu-history-btn:hover {
+        background-color: #d97706 !important;
+        color: #fff !important;
+        transform: scale(1.06);
+    }
+
+    /* "Solo urgentes" toggle */
+    .urg-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        height: 32px;
+        padding: 0 0.75rem;
+        font-size: 12px;
+        font-weight: 600;
+        color: #b91c1c;
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 6px;
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+        transition: all 0.12s;
+        margin: 0;
+    }
+    .urg-toggle:hover {
+        background: #fee2e2;
+        border-color: #fca5a5;
+    }
+    .urg-toggle input {
+        margin: 0;
+        accent-color: #ef4444;
+    }
+    .urg-toggle.is-active {
+        background: #ef4444;
+        border-color: #ef4444;
+        color: #fff;
+    }
+    .urg-toggle.is-active input { accent-color: #fff; }
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -480,6 +678,7 @@ if (count($npu_list) > 0) {
 <div class="dashboard-header">
     <form method="GET" action="index.php" id="searchForm" class="d-flex flex-column gap-2">
         <input type="hidden" name="estado" value="<?= e($estado_actual) ?>">
+        <input type="hidden" name="per_page" value="<?= e($per_page) ?>">
         
         <div class="d-flex flex-column flex-md-row gap-2">
             <div class="search-input-wrapper">
@@ -487,13 +686,18 @@ if (count($npu_list) > 0) {
                 <input type="search" name="q" value="<?= e($busqueda) ?>" class="form-control search-input" placeholder="Buscar por UID, NPU, o palabras clave..." autocomplete="off">
             </div>
             <div class="d-flex gap-2">
+                <label class="urg-toggle <?= $solo_urgentes ? 'is-active' : '' ?>" title="Mostrar solo reparaciones urgentes">
+                    <input type="checkbox" name="solo_urgentes" value="1" <?= $solo_urgentes ? 'checked' : '' ?> onchange="this.form.submit()">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <span>Urgentes</span>
+                </label>
                 <button type="submit" class="btn btn-dark">Buscar</button>
                 <?php if ($busqueda || $sala_filtro || $tecnico_filtro || $estado_filtro || $anio_filtro || $mes_filtro || $dia_filtro || $diasemana_filtro): ?>
                 <a href="index.php?estado=<?= e($estado_actual) ?>" class="btn btn-outline-secondary" title="Limpiar filtros">
                     <i class="bi bi-eraser-fill me-md-1"></i><span class="d-none d-md-inline">Limpiar</span>
                 </a>
                 <?php endif; ?>
-                <button type="submit" formaction="<?= APP_URL ?>/../exports/exportar_excel.php" class="btn btn-success border-0" style="background-color: #10b981;" title="Exportar a Excel">
+                <button type="submit" formaction="../exports/exportar_excel.php" class="btn btn-success border-0" style="background-color: #10b981;" title="Exportar a Excel">
                     <i class="bi bi-file-earmark-excel-fill me-md-1"></i><span class="d-none d-md-inline">Excel</span>
                 </button>
             </div>
@@ -511,9 +715,7 @@ if (count($npu_list) > 0) {
                     </select>
                     <select name="f_mes" class="form-select filter-select flex-fill" style="min-width: 105px;" onchange="this.form.submit()">
                         <option value="">Mes (Todos)</option>
-                        <?php 
-                        $meses = ['01'=>'Enero', '02'=>'Febrero', '03'=>'Marzo', '04'=>'Abril', '05'=>'Mayo', '06'=>'Junio', '07'=>'Julio', '08'=>'Agosto', '09'=>'Septiembre', '10'=>'Octubre', '11'=>'Noviembre', '12'=>'Diciembre'];
-                        foreach ($meses as $num => $nom): ?>
+                        <?php foreach ($meses as $num => $nom): ?>
                             <option value="<?= $num ?>" <?= $mes_filtro === $num ? 'selected' : '' ?>><?= substr($nom, 0, 3) ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -564,6 +766,21 @@ if (count($npu_list) > 0) {
     </form>
 </div>
 
+<?php if (!empty($active_filters)): ?>
+<div class="active-filters">
+    <span class="af-label"><i class="bi bi-funnel-fill me-1"></i>Filtros activos:</span>
+    <?php foreach ($active_filters as $f): ?>
+        <span class="filter-chip">
+            <?= e($f['label']) ?>: <strong title="<?= e($f['value']) ?>"><?= e($f['value']) ?></strong>
+            <a href="<?= urlSinFiltro($f['key']) ?>" class="chip-remove" title="Quitar este filtro">×</a>
+        </span>
+    <?php endforeach; ?>
+    <a href="index.php?estado=<?= e($estado_actual) ?>&per_page=<?= e($per_page) ?>" class="clear-all">
+        <i class="bi bi-x-circle me-1"></i>Limpiar todos
+    </a>
+</div>
+<?php endif; ?>
+
 <!-- Nav Tabs (Chips) -->
 <div class="nav-pills-custom">
     <?php foreach ($tabs_estado as $valor_estado => $etiqueta_estado): 
@@ -590,16 +807,16 @@ if (count($npu_list) > 0) {
 
 <!-- Table Data -->
 <div class="table-container mb-4">
-    <div class="table-scroll">
+    <div class="table-scroll <?= empty($active_filters) ? 'no-chips' : '' ?>">
         <table class="table custom-table">
             <thead>
                 <tr>
-                    <th>Ingreso</th>
-                    <th>Identificación</th>
+                    <th class="col-ingreso">Ingreso</th>
+                    <th class="col-identif">Identificación</th>
                     <th>Equipo y Sala</th>
                     <th>Técnico</th>
                     <th>Estado</th>
-                    <?php if ($estado_actual === 'EN REPARACION' || $estado_actual === 'EN_REPARACION'): ?>
+                    <?php if ($estado_actual === 'EN_REPARACION'): ?>
                         <th>Inicio Rep.</th>
                     <?php endif; ?>
                     <?php if ($estado_actual === 'REPARADOS'): ?>
@@ -610,11 +827,15 @@ if (count($npu_list) > 0) {
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($reparaciones as $r): ?>
-                <tr>
-                    <td>
-                        <?php 
-                        $fecha_fmt = formatDatetimeArg($r['fecha']); 
+                <?php
+                $avatarPalette = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#475569'];
+                foreach ($reparaciones as $r):
+                    $isUrgent = $r['urgente'] === 'SI';
+                ?>
+                <tr<?= $isUrgent ? ' class="urgent-row"' : '' ?>>
+                    <td class="col-ingreso">
+                        <?php
+                        $fecha_fmt = formatDatetimeArg($r['fecha']);
                         $fecha_partes = explode(' ', $fecha_fmt);
                         ?>
                         <div class="ingreso-cell">
@@ -623,17 +844,22 @@ if (count($npu_list) > 0) {
                         </div>
                     </td>
                     
-                    <td>
+                    <td class="col-identif">
                         <div class="identificacion-cell">
-                            <div>
+                            <div title="UID: <?= e($r['uid']) ?: '--' ?>">
                                 <span class="cell-label">UID:</span>
                                 <strong><?= e($r['uid']) ?: '--' ?></strong>
                             </div>
-                            <div>
+                            <div title="NPU: <?= e($r['npu']) ?: '--' ?>">
                                 <span class="cell-label">NPU:</span>
                                 <strong><?= e($r['npu']) ?: '--' ?></strong>
-                                <?php if ($r['npu'] && in_array(trim($r['npu']), $npus_repetidos)): ?>
-                                    <span class="badge bg-warning text-dark border border-warning ms-1" style="font-size: 10px; padding: 0.15rem 0.3rem;" title="Este equipo ya fue reparado con anterioridad">R</span>
+                                <?php if ($r['npu'] && isset($npus_repetidos[trim($r['npu'])])):
+                                    $reps = $npus_repetidos[trim($r['npu'])];
+                                ?>
+                                    <button type="button" class="badge bg-warning text-dark border border-warning ms-1 npu-history-btn"
+                                            style="font-size: 10px; padding: 0.15rem 0.3rem; cursor: pointer; line-height: 1;"
+                                            title="Ver las <?= $reps ?> reparaciones de este NPU"
+                                            data-npu="<?= e(trim($r['npu'])) ?>"><?= $reps ?></button>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -649,9 +875,11 @@ if (count($npu_list) > 0) {
                     </td>
                     
                     <td class="cell-tech">
-                        <?php if ($r['tecnico_nombre']): ?>
+                        <?php if ($r['tecnico_nombre']):
+                            $avatarColor = $avatarPalette[abs(crc32($r['tecnico_nombre'])) % count($avatarPalette)];
+                        ?>
                             <div class="d-flex align-items-center gap-2">
-                                <div class="tech-avatar"><?= strtoupper(substr(e($r['tecnico_nombre']), 0, 1)) ?></div>
+                                <div class="tech-avatar" style="background-color: <?= $avatarColor ?>;"><?= e(mb_strtoupper(mb_substr($r['tecnico_nombre'], 0, 1, 'UTF-8'), 'UTF-8')) ?></div>
                                 <span><?= e($r['tecnico_nombre']) ?></span>
                             </div>
                         <?php else: ?>
@@ -660,34 +888,18 @@ if (count($npu_list) > 0) {
                     </td>
                     
                     <td>
-                        <?php 
+                        <?php
                         $badge_class = 'status-secondary';
                         $est = strtoupper($r['estado']);
                         if (strpos($est, 'REPARADO') !== false) $badge_class = 'status-success';
                         elseif (strpos($est, 'PEND') !== false) $badge_class = 'status-warning';
                         elseif (strpos($est, 'SIN REPARACION') !== false) $badge_class = 'status-danger';
                         elseif (strpos($est, 'PRUEBA') !== false) $badge_class = 'status-info';
-                        
-                        $display_estado = e($r['estado']);
-                        if ($est === 'PENDIENTE DE REPUESTO') {
-                            $display_estado = 'PENDIENTE DE<br>REPUESTO';
-                        } elseif ($est === 'PEND. DE REVISION' || $est === 'PENDIENTE DE REVISION') {
-                            $display_estado = 'PENDIENTE DE<br>REVISIÓN';
-                        } elseif ($est === 'EN REPARACION') {
-                            $display_estado = 'EN<br>REPARACIÓN';
-                        } elseif ($est === 'SIN REPARACION') {
-                            $display_estado = 'SIN<br>REPARACIÓN';
-                        }
                         ?>
-                        <div class="d-flex flex-column align-items-start gap-1">
-                            <span class="status-pill <?= $badge_class ?>"><?= $display_estado ?></span>
-                            <?php if ($r['urgente'] === 'SI'): ?>
-                                <span class="urgency-badge"><i class="bi bi-exclamation-triangle-fill"></i> URG</span>
-                            <?php endif; ?>
-                        </div>
+                        <span class="status-pill <?= $badge_class ?>"><?= e($r['estado']) ?></span>
                     </td>
 
-                    <?php if ($estado_actual === 'EN REPARACION' || $estado_actual === 'EN_REPARACION'): ?>
+                    <?php if ($estado_actual === 'EN_REPARACION'): ?>
                         <td class="cell-date fw-bold text-dark">
                             <?= $r['fecha_en_reparacion'] ? date('d/m/y', strtotime($r['fecha_en_reparacion'])) : '--' ?>
                         </td>
@@ -714,7 +926,13 @@ if (count($npu_list) > 0) {
                             <a href="reparacion_editar.php?id=<?= $r['id'] ?>" class="action-btn text-primary" title="Editar">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <button type="button" class="action-btn text-danger" title="Eliminar" onclick="confirmDelete(<?= $r['id'] ?>)">
+                            <button type="button" class="action-btn text-danger" title="Eliminar"
+                                    onclick="confirmDelete(this)"
+                                    data-id="<?= $r['id'] ?>"
+                                    data-equipo="<?= e($r['equipo']) ?>"
+                                    data-sala="<?= e($r['sala']) ?>"
+                                    data-npu="<?= e($r['npu'] ?? '') ?>"
+                                    data-fecha="<?= e(formatDatetimeArg($r['fecha'])) ?>">
                                 <i class="bi bi-trash3"></i>
                             </button>
                             <?php endif; ?>
@@ -735,11 +953,25 @@ if (count($npu_list) > 0) {
     <?php endif; ?>
     
     <!-- Footer / Pagination -->
-    <div class="p-2 px-3 bg-light border-top d-flex justify-content-between align-items-center">
+    <div class="p-2 px-3 bg-light border-top d-flex justify-content-between align-items-center gap-3 flex-wrap">
         <span class="text-muted" style="font-size: 12px;">
-            Página <b><?= $page ?></b> de <?= max(1, $total_pages) ?>
+            <?php
+                $start = $total_registros > 0 ? $offset + 1 : 0;
+                $end = min($offset + count($reparaciones), $total_registros);
+            ?>
+            Mostrando <b><?= number_format($start, 0, ',', '.') ?>–<?= number_format($end, 0, ',', '.') ?></b>
+            de <b><?= number_format($total_registros, 0, ',', '.') ?></b> reparaciones
+            · Página <b><?= $page ?></b> de <?= max(1, $total_pages) ?>
         </span>
-        
+
+        <div class="d-flex align-items-center gap-2">
+            <label class="text-muted m-0" style="font-size: 12px;">Por página:</label>
+            <select id="perPageSelect" class="per-page-select">
+                <?php foreach ($per_page_allowed as $opt): ?>
+                    <option value="<?= $opt ?>" <?= $per_page === $opt ? 'selected' : '' ?>><?= $opt ?></option>
+                <?php endforeach; ?>
+            </select>
+
         <nav aria-label="Navegación">
             <ul class="pagination pagination-sm mb-0">
                 <?php
@@ -769,6 +1001,51 @@ if (count($npu_list) > 0) {
                 </li>
             </ul>
         </nav>
+        </div>
+    </div>
+</div>
+
+<!-- NPU history modal: lists every repair for a given NPU -->
+<div class="modal fade" id="npuHistoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius: 10px;">
+            <div class="modal-header py-2 px-3">
+                <h6 class="modal-title fw-bold m-0" style="font-size: 0.9rem;">
+                    <i class="bi bi-clock-history me-1"></i>
+                    Historial del NPU
+                    <code id="npuHistoryNpu" class="ms-1" style="font-size: 0.8rem; background: #f1f5f9; padding: 1px 6px; border-radius: 4px;"></code>
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="npuHistoryLoading" class="text-center py-4 text-muted" style="font-size: 0.85rem;">
+                    <div class="spinner-border spinner-border-sm me-2"></div> Cargando...
+                </div>
+                <div id="npuHistoryEmpty" class="text-center py-4 text-muted" style="font-size: 0.85rem; display: none;">
+                    No se encontraron reparaciones para este NPU.
+                </div>
+                <div id="npuHistoryWrapper" style="display: none;">
+                    <table class="table table-sm mb-0" style="font-size: 0.78rem;">
+                        <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;">
+                            <tr>
+                                <th style="width: 60px; padding: 0.4rem 0.6rem;">ID</th>
+                                <th style="width: 110px; padding: 0.4rem 0.6rem;">Fecha</th>
+                                <th style="padding: 0.4rem 0.6rem;">Equipo</th>
+                                <th style="padding: 0.4rem 0.6rem;">Sala</th>
+                                <th style="padding: 0.4rem 0.6rem;">Técnico</th>
+                                <th style="padding: 0.4rem 0.6rem;">Estado</th>
+                                <th style="width: 50px; padding: 0.4rem 0.6rem;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="npuHistoryRows"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer py-2 px-3" style="font-size: 0.75rem;">
+                <span class="text-muted me-auto" id="npuHistoryCount"></span>
+                <button type="button" class="btn btn-sm btn-light border" data-bs-dismiss="modal" style="font-size: 0.75rem; padding: 0.3rem 0.7rem;">Cerrar</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -780,7 +1057,21 @@ if (count($npu_list) > 0) {
                     <i class="bi bi-exclamation-triangle-fill" style="font-size: 1.5rem;"></i>
                 </div>
                 <h6 class="fw-bold text-dark mb-1" style="font-size: 0.95rem;">Eliminar Reparación</h6>
-                <p class="text-muted mb-4" style="font-size: 0.8rem; line-height: 1.4;">Esta acción es permanente y no se puede deshacer. ¿Confirmar eliminación?</p>
+                <div class="bg-light border rounded-3 px-3 py-2 my-3 text-start" style="font-size: 0.78rem;">
+                    <div class="fw-bold text-dark" style="font-size: 0.9rem;" id="deleteEquipo">—</div>
+                    <div class="text-muted mt-1">
+                        <i class="bi bi-geo-alt-fill text-danger opacity-75 me-1"></i><span id="deleteSala">—</span>
+                    </div>
+                    <div class="text-muted">
+                        <i class="bi bi-tag-fill opacity-50 me-1"></i>NPU: <span id="deleteNpu">—</span>
+                    </div>
+                    <div class="text-muted">
+                        <i class="bi bi-calendar3 opacity-50 me-1"></i><span id="deleteFecha">—</span>
+                    </div>
+                </div>
+                <p class="text-danger mb-4" style="font-size: 0.78rem; line-height: 1.4;">
+                    <i class="bi bi-exclamation-circle-fill me-1"></i>Esta acción es permanente y no se puede deshacer.
+                </p>
                 <div class="d-flex gap-2">
                     <button type="button" class="btn btn-light flex-grow-1 fw-bold text-secondary border" style="font-size: 0.8rem; padding: 0.5rem;" data-bs-dismiss="modal">Cancelar</button>
                     <form method="POST" action="../admin/eliminar_reparacion.php" id="deleteForm" class="flex-grow-1">
@@ -795,10 +1086,105 @@ if (count($npu_list) > 0) {
 </div>
 
 <script>
-function confirmDelete(id) {
-    document.getElementById('deleteId').value = id;
-    new bootstrap.Modal(document.getElementById('modalEliminar')).show();
+function confirmDelete(btn) {
+    document.getElementById('deleteId').value = btn.dataset.id;
+    document.getElementById('deleteEquipo').textContent = btn.dataset.equipo || '—';
+    document.getElementById('deleteSala').textContent = btn.dataset.sala || '—';
+    document.getElementById('deleteNpu').textContent = btn.dataset.npu || '—';
+    document.getElementById('deleteFecha').textContent = btn.dataset.fecha || '—';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEliminar')).show();
 }
+
+// Per-page selector: rebuild URL preserving every other filter, reset to page 1
+document.getElementById('perPageSelect')?.addEventListener('change', function () {
+    const url = new URL(window.location.href);
+    url.searchParams.set('per_page', this.value);
+    url.searchParams.set('page', '1');
+    window.location.href = url.toString();
+});
+
+// --- NPU history modal: click on the count badge to load all repairs for that NPU ---
+(function () {
+    const modalEl    = document.getElementById('npuHistoryModal');
+    const loadingEl  = document.getElementById('npuHistoryLoading');
+    const emptyEl    = document.getElementById('npuHistoryEmpty');
+    const wrapperEl  = document.getElementById('npuHistoryWrapper');
+    const tbodyEl    = document.getElementById('npuHistoryRows');
+    const npuLabel   = document.getElementById('npuHistoryNpu');
+    const countLabel = document.getElementById('npuHistoryCount');
+    if (!modalEl) return;
+
+    function esc(s) {
+        return String(s ?? '').replace(/[&<>"']/g, c => ({
+            '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
+        })[c]);
+    }
+
+    function statusClass(estado) {
+        const e = (estado || '').toUpperCase();
+        if (e.includes('REPARADO')) return 'status-success';
+        if (e.includes('SIN REPARACION')) return 'status-danger';
+        if (e.includes('PEND')) return 'status-warning';
+        if (e.includes('PRUEBA')) return 'status-info';
+        return 'status-secondary';
+    }
+
+    function showState(state) {
+        loadingEl.style.display = state === 'loading' ? '' : 'none';
+        emptyEl.style.display   = state === 'empty'   ? '' : 'none';
+        wrapperEl.style.display = state === 'data'    ? '' : 'none';
+    }
+
+    async function openNpuHistory(npu) {
+        npuLabel.textContent = npu;
+        countLabel.textContent = '';
+        tbodyEl.innerHTML = '';
+        showState('loading');
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+
+        try {
+            const res = await fetch('../api/reparaciones_por_npu.php?npu=' + encodeURIComponent(npu));
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            const reps = data.reparaciones || [];
+
+            if (reps.length === 0) {
+                showState('empty');
+                return;
+            }
+
+            tbodyEl.innerHTML = reps.map(r => `
+                <tr${r.urgente === 'SI' ? ' style="background: #fef2f2;"' : ''}>
+                    <td style="padding: 0.35rem 0.6rem;"><strong>#${esc(r.id)}</strong></td>
+                    <td style="padding: 0.35rem 0.6rem; white-space: nowrap;">${esc(r.fecha_fmt)}</td>
+                    <td style="padding: 0.35rem 0.6rem;">${esc(r.equipo)}</td>
+                    <td style="padding: 0.35rem 0.6rem;">${esc(r.sala)}</td>
+                    <td style="padding: 0.35rem 0.6rem;">${esc(r.tecnico_nombre || '—')}</td>
+                    <td style="padding: 0.35rem 0.6rem;"><span class="status-pill ${statusClass(r.estado)}" style="font-size: 10px; min-width: 0; padding: 3px 6px;">${esc(r.estado)}</span></td>
+                    <td style="padding: 0.35rem 0.6rem; text-align: center;">
+                        <a href="reparacion_detalle.php?id=${esc(r.id)}" class="action-btn" title="Abrir ficha">
+                            <i class="bi bi-box-arrow-up-right"></i>
+                        </a>
+                    </td>
+                </tr>
+            `).join('');
+
+            countLabel.textContent = `${reps.length} ingreso${reps.length === 1 ? '' : 's'} para este NPU`;
+            showState('data');
+        } catch (e) {
+            console.error('Error loading NPU history', e);
+            emptyEl.textContent = 'Error al cargar el historial. Intentá nuevamente.';
+            showState('empty');
+        }
+    }
+
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.npu-history-btn');
+        if (!btn) return;
+        e.preventDefault();
+        openNpuHistory(btn.dataset.npu);
+    });
+})();
 </script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

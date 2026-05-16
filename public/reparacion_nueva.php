@@ -1,4 +1,4 @@
-f<?php
+<?php
 // public/reparacion_nueva.php
 require_once __DIR__ . '/../app/config.php';
 require_once __DIR__ . '/../app/auth.php';
@@ -133,13 +133,61 @@ require_once __DIR__ . '/includes/header.php';
         border-radius: 8px;
         border: 1px solid var(--border-color);
         box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-        max-width: 900px;
+        max-width: 960px;
         margin: 0 auto;
         overflow: hidden;
     }
 
     .dense-card .card-body {
-        padding: 1.25rem 1.5rem;
+        padding: 1.1rem 1.4rem 1.2rem;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        column-gap: 1.5rem;
+        row-gap: 0.75rem;
+        align-items: start;
+    }
+
+    .form-grid .col-left,
+    .form-grid .col-right {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .form-grid .col-right {
+        height: 100%;
+    }
+
+    .meta-row {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .meta-row .date-field-block {
+        flex: 1 1 auto;
+        min-width: 180px;
+    }
+
+    .obs-block {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+    }
+
+    .obs-block textarea {
+        flex: 1 1 auto;
+        min-height: 140px;
+    }
+
+    @media (max-width: 767.98px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
     }
 
     .form-label-compact {
@@ -287,92 +335,93 @@ require_once __DIR__ . '/includes/header.php';
             <form method="POST" action="reparacion_nueva.php" class="d-flex flex-column gap-3">
                 <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                 
-                <div class="top-form-row">
-                    <div class="date-field-block">
-                        <label class="form-label-compact">Fecha y Hora</label>
-                        <input type="text" name="fecha" id="fecha_input" class="form-control form-control-compact bg-light" 
-                               value="<?= date('Y-m-d H:i') ?>" readonly>
+                <div class="form-grid">
+                    <div class="col-left">
+                        <div class="meta-row">
+                            <div class="date-field-block">
+                                <label class="form-label-compact">Fecha y Hora</label>
+                                <input type="text" name="fecha" id="fecha_input" class="form-control form-control-compact bg-light"
+                                       value="<?= date('Y-m-d H:i') ?>" readonly>
+                            </div>
+                            <div class="switch-block">
+                                <label class="switch-inline form-switch urgent-pill">
+                                    <input class="form-check-input m-0" type="checkbox" role="switch" id="urgente" name="urgente" value="SI">
+                                    <span style="padding-top: 2px;">URGENTE</span>
+                                </label>
+                            </div>
+                        </div>
                         <?php if ($user_role === 'admin'): ?>
-                        <small>Formato: YYYY-MM-DD HH:MM</small>
-                        <?php endif; ?>
-                    </div>
-                    
-                    <?php if ($user_role === 'admin'): ?>
-                    <div class="switch-block">
-                        <label class="switch-inline form-switch">
+                        <label class="switch-inline form-switch" style="margin-top: -4px;">
                             <input class="form-check-input m-0" type="checkbox" role="switch" id="unlock_fecha">
-                            <span class="text-muted" style="font-size: 13px; padding-top: 2px;">Editar fecha manualmente</span>
+                            <span class="text-muted" style="font-size: 12px; padding-top: 2px;">Editar fecha manualmente</span>
                         </label>
-                    </div>
-                    <?php endif; ?>
-                    
-                    <div class="switch-block">
-                        <label class="switch-inline form-switch urgent-pill">
-                            <input class="form-check-input m-0" type="checkbox" role="switch" id="urgente" name="urgente" value="SI">
-                            <span style="padding-top: 2px;">URGENTE</span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label-compact">Sala <span class="text-danger">*</span></label>
-                        <select name="sala" class="form-select tom-select" data-allow-new required>
-                            <option value="">Seleccione o escriba...</option>
-                            <?php foreach ($salas as $s): ?>
-                                <option value="<?= e($s['nombre']) ?>"><?= e($s['nombre']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label-compact">Familia</label>
-                        <select name="familia" class="form-select tom-select" data-allow-new>
-                            <option value="">Seleccione o escriba...</option>
-                            <?php foreach ($familias as $f): ?>
-                                <option value="<?= e($f['nombre']) ?>"><?= e($f['nombre']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label-compact">Equipo <span class="text-danger">*</span></label>
-                        <select name="equipo" class="form-select tom-select" data-allow-new required>
-                            <option value="">Seleccione o escriba...</option>
-                            <?php foreach ($equipos as $eq): ?>
-                                <option value="<?= e($eq['nombre']) ?>"><?= e($eq['nombre']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label-compact">NPU / Patrimonio</label>
-                        <input type="text" name="npu" id="npu_input" class="form-control form-control-compact" placeholder="Ej: 123456">
-                        <div id="npu_warning" class="form-text-compact text-danger d-none mt-1"><i class="bi bi-exclamation-triangle"></i> NPU con registros previos.</div>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label-compact">UID (MAC/IP/Etc)</label>
-                        <input type="text" name="uid" class="form-control form-control-compact" placeholder="Identificador único">
-                    </div>
-                    <div class="col-md-4">
-                        <?php if ($user_role === 'admin'): ?>
-                        <label class="form-label-compact">Asignar Técnico (Opcional)</label>
-                        <select name="tecnico_id" class="form-select tom-select">
-                            <option value="">Dejar PEND. DE REVISION</option>
-                            <?php foreach ($tecnicos as $t): ?>
-                                <option value="<?= e($t['id']) ?>"><?= e($t['nombre']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
                         <?php endif; ?>
+
+                        <div>
+                            <label class="form-label-compact">Sala <span class="text-danger">*</span></label>
+                            <select name="sala" class="form-select tom-select" data-allow-new required>
+                                <option value="">Seleccione o escriba...</option>
+                                <?php foreach ($salas as $s): ?>
+                                    <option value="<?= e($s['nombre']) ?>"><?= e($s['nombre']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label-compact">Familia</label>
+                                <select name="familia" class="form-select tom-select" data-allow-new>
+                                    <option value="">Seleccione o escriba...</option>
+                                    <?php foreach ($familias as $f): ?>
+                                        <option value="<?= e($f['nombre']) ?>"><?= e($f['nombre']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label-compact">Equipo <span class="text-danger">*</span></label>
+                                <select name="equipo" class="form-select tom-select" data-allow-new required>
+                                    <option value="">Seleccione o escriba...</option>
+                                    <?php foreach ($equipos as $eq): ?>
+                                        <option value="<?= e($eq['nombre']) ?>"><?= e($eq['nombre']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label-compact">NPU</label>
+                                <input type="text" name="npu" id="npu_input" class="form-control form-control-compact" placeholder="Ej: 123456">
+                                <div id="npu_warning" class="form-text-compact text-danger d-none mt-1"><i class="bi bi-exclamation-triangle"></i> NPU con registros previos.</div>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label-compact">UID</label>
+                                <input type="text" name="uid" class="form-control form-control-compact" placeholder="Identificador único">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-right">
+                        <?php if ($user_role === 'admin'): ?>
+                        <div>
+                            <label class="form-label-compact">Asignar Técnico (Opcional)</label>
+                            <select name="tecnico_id" class="form-select tom-select">
+                                <option value="">Dejar PEND. DE REVISION</option>
+                                <?php foreach ($tecnicos as $t): ?>
+                                    <option value="<?= e($t['id']) ?>"><?= e($t['nombre']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <?php endif; ?>
+
+                        <div class="obs-block">
+                            <label class="form-label-compact">Falla Reportada / Observaciones Iniciales</label>
+                            <textarea name="observaciones" class="form-control textarea-compact"></textarea>
+                        </div>
                     </div>
                 </div>
 
-                <div>
-                    <label class="form-label-compact">Falla Reportada / Observaciones Iniciales</label>
-                    <textarea name="observaciones" class="form-control textarea-compact" rows="3"></textarea>
-                </div>
-
-                <div class="d-flex justify-content-end gap-2 mt-2 pt-3 border-top">
+                <div class="d-flex justify-content-end gap-2 mt-1 pt-3 border-top">
                     <a href="index.php" class="btn btn-light btn-compact border text-secondary">Cancelar</a>
                     <button type="submit" class="btn btn-primary btn-compact shadow-none"><i class="bi bi-save me-1"></i> Guardar Ingreso</button>
                 </div>
