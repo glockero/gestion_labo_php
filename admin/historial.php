@@ -62,6 +62,21 @@ function getActionColor($accion) {
 }
 ?>
 
+<style>
+.historial-table-scroll {
+    max-height: calc(100vh - 220px);
+    min-height: 240px;
+    overflow: auto;
+}
+.historial-table-scroll thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #f8fafc;
+    box-shadow: inset 0 -1px 0 #e2e8f0;
+}
+</style>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="h3"><i class="bi bi-clock-history"></i> Historial General del Sistema</h2>
 </div>
@@ -80,7 +95,7 @@ function getActionColor($accion) {
 </div>
 
 <div class="card shadow-sm">
-    <div class="table-responsive">
+    <div class="historial-table-scroll">
         <table class="table table-modern mb-0">
             <thead>
                 <tr>
@@ -98,7 +113,7 @@ function getActionColor($accion) {
                 <?php foreach ($registros as $r): ?>
                 <tr>
                     <td class="text-nowrap"><?= formatDatetimeArg($r['fecha']) ?></td>
-                    <td><i class="bi bi-person"></i> <?= e($r['username'] ?? 'Sistema') ?></td>
+                    <td><strong><?= e($r['username'] ?? 'Sistema') ?></strong></td>
                     <td><span class="badge <?= getActionColor($r['accion']) ?>"><?= e($r['accion']) ?></span></td>
                     <td class="small"><?= e($r['detalle']) ?></td>
                     <td>

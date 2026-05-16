@@ -3,6 +3,7 @@
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/historial.php';
+require_once __DIR__ . '/UsuarioModel.php';
 
 function ensureAuthSupportTables() {
     static $initialized = false;
@@ -99,16 +100,29 @@ function requireLogin() {
     if (!isLoggedIn()) {
         redirect('/login.php');
     }
-    
+
+    UsuarioModel::ensureSchema();
+
     // Check if session is still valid (single session per user)
     $pdo = getDbConnection();
-    $stmt = $pdo->prepare("SELECT session_id, activo FROM usuarios WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT session_id, activo, password_reset_required FROM usuarios WHERE id = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $user = $stmt->fetch();
-    
+
     if (!$user || !$user['activo'] || $user['session_id'] !== session_id()) {
         logout();
         redirect('/login.php?error=session_invalid');
+    }
+
+    // Force password change if flagged (admin reset). Allow only the change-password page itself.
+    if (!empty($user['password_reset_required'])) {
+        $_SESSION['must_change_password'] = true;
+        $script = basename($_SERVER['SCRIPT_NAME'] ?? '');
+        if ($script !== 'cambiar_password.php' && $script !== 'logout.php') {
+            redirect('/cambiar_password.php');
+        }
+    } else {
+        unset($_SESSION['must_change_password']);
     }
 }
 

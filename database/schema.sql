@@ -19,6 +19,8 @@ CREATE TABLE usuarios (
     last_ip VARCHAR(45) NULL,
     session_id VARCHAR(128) NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_at DATETIME NULL,
+    password_reset_required BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (tecnico_id) REFERENCES tecnicos(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -30,6 +32,7 @@ CREATE TABLE estados_catalogo (
 
 CREATE TABLE equipos_catalogo (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    lab INT NULL UNIQUE,
     nombre VARCHAR(100) NOT NULL UNIQUE,
     valor VARCHAR(100) NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -58,6 +61,7 @@ CREATE TABLE reparaciones (
     equipo VARCHAR(100) NOT NULL,
     urgente ENUM('SI', 'NO') DEFAULT 'NO',
     tecnico_id INT NULL,
+    tecnico_nombre_historico VARCHAR(100) NULL,
     estado VARCHAR(100) DEFAULT 'PEND. DE REVISION',
     observaciones TEXT NULL,
     dia_semana VARCHAR(20) NULL,

@@ -289,18 +289,91 @@ class ImportService {
         ];
     }
 
+    /**
+     * Returns the absolute paths of directories from which CSVs may be loaded.
+     * Anything outside these directories is rejected (defense against path
+     * traversal via POSTed file_path). The list intentionally only contains
+     * the project root and an optional uploads/ subdir.
+     */
+    /**
+     * Returns a small sample of the CSV (first N rows) plus total row count.
+     * Used to show the admin what they're about to import before committing.
+     */
+    public static function previewRows($filePath, $maxRows = 10) {
+        $handle = self::openCsv($filePath);
+        try {
+            $headers = self::readHeaders($handle);
+            $rows = [];
+            $total = 0;
+            while (($row = fgetcsv($handle)) !== false) {
+                if (count($rows) < $maxRows) {
+                    $rows[] = $row;
+                }
+                $total++;
+            }
+            return [
+                'headers' => $headers,
+                'rows' => $rows,
+                'total' => $total,
+                'displayed' => count($rows),
+            ];
+        } finally {
+            fclose($handle);
+        }
+    }
+
+    private static function getAllowedImportDirs() {
+        $project = realpath(dirname(__DIR__));
+        if ($project === false) {
+            return [];
+        }
+        $dirs = [$project];
+        $uploads = $project . DIRECTORY_SEPARATOR . 'uploads';
+        if (is_dir($uploads)) {
+            $dirs[] = realpath($uploads);
+        }
+        return array_filter($dirs);
+    }
+
+    private static function isPathAllowed($filePath) {
+        $real = realpath($filePath);
+        if ($real === false) {
+            return false;
+        }
+        foreach (self::getAllowedImportDirs() as $base) {
+            $baseWithSep = rtrim($base, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+            if ($real === $base || strpos($real, $baseWithSep) === 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static function openCsv($filePath) {
         if (!is_file($filePath)) {
-            throw new RuntimeException("No existe el archivo: $filePath");
+            // Don't leak the resolved absolute path back to the user — only echo
+            // the basename so the filesystem layout stays hidden.
+            throw new RuntimeException("No existe el archivo: " . basename($filePath));
+        }
+
+        if (!self::isPathAllowed($filePath)) {
+            throw new RuntimeException(
+                "Ruta no permitida. Solo se pueden importar archivos ubicados dentro del directorio del proyecto."
+            );
+        }
+
+        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        if ($ext !== 'csv') {
+            throw new RuntimeException("Solo se permiten archivos con extensión .csv");
         }
 
         if (!is_readable($filePath)) {
-            throw new RuntimeException("No se puede leer el archivo: $filePath");
+            throw new RuntimeException("No se puede leer el archivo: " . basename($filePath));
         }
 
         $handle = fopen($filePath, 'r');
         if ($handle === false) {
-            throw new RuntimeException("No se pudo abrir el archivo: $filePath");
+            throw new RuntimeException("No se pudo abrir el archivo: " . basename($filePath));
         }
 
         return $handle;

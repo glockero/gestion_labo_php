@@ -10,38 +10,110 @@ require_once __DIR__ . '/../app/ImportService.php';
 
 requireRole('admin');
 
-$defaultFiles = [
-    'familias' => dirname(__DIR__) . '/familias.csv',
-    'equipos' => dirname(__DIR__) . '/equipos.csv',
-    'reparaciones' => dirname(__DIR__) . '/reparaciones.csv',
+$uploadsDir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'imports';
+if (!is_dir($uploadsDir)) {
+    @mkdir($uploadsDir, 0775, true);
+}
+
+$tipoLabels = [
+    'familias'     => 'Familias',
+    'equipos'      => 'Equipos',
+    'reparaciones' => 'Reparaciones',
 ];
-$estadoMappings = ImportService::getEstadoMappings();
+
+$importMethods = [
+    'familias'     => 'importFamiliasCsv',
+    'equipos'      => 'importEquiposCsv',
+    'reparaciones' => 'importReparacionesCsv',
+];
 
 $importResult = null;
-$importError = null;
+$importError  = null;
+$previewType  = null;   // 'familias' | 'equipos' | 'reparaciones'
+$previewData  = null;   // ['headers'=>..., 'rows'=>..., 'total'=>..., 'summary'=>..., 'path'=>...]
+
+/**
+ * Move an uploaded CSV into uploads/imports with a unique, safe filename.
+ * Returns the absolute path. Throws on validation errors.
+ */
+function persistUploadedCsv($fieldName, $uploadsDir) {
+    if (empty($_FILES[$fieldName]) || ($_FILES[$fieldName]['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        $code = $_FILES[$fieldName]['error'] ?? UPLOAD_ERR_NO_FILE;
+        $messages = [
+            UPLOAD_ERR_INI_SIZE   => 'El archivo supera el tamaño máximo permitido por el servidor.',
+            UPLOAD_ERR_FORM_SIZE  => 'El archivo supera el tamaño máximo permitido por el formulario.',
+            UPLOAD_ERR_PARTIAL    => 'El archivo se subió parcialmente. Intente nuevamente.',
+            UPLOAD_ERR_NO_FILE    => 'No se seleccionó ningún archivo.',
+            UPLOAD_ERR_NO_TMP_DIR => 'Falta el directorio temporal en el servidor.',
+            UPLOAD_ERR_CANT_WRITE => 'No se pudo escribir el archivo en disco.',
+            UPLOAD_ERR_EXTENSION  => 'Una extensión PHP detuvo la subida del archivo.',
+        ];
+        throw new RuntimeException($messages[$code] ?? 'Error desconocido al subir el archivo.');
+    }
+
+    $info = $_FILES[$fieldName];
+
+    if ($info['size'] > 10 * 1024 * 1024) {
+        throw new RuntimeException('El archivo supera 10 MB.');
+    }
+
+    $ext = strtolower(pathinfo($info['name'], PATHINFO_EXTENSION));
+    if ($ext !== 'csv') {
+        throw new RuntimeException('Solo se permiten archivos .csv (recibido: .' . e($ext) . ').');
+    }
+
+    $base = preg_replace('/[^a-zA-Z0-9._-]/', '_', pathinfo($info['name'], PATHINFO_FILENAME));
+    if ($base === '') $base = 'archivo';
+    $unique = date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '_' . $base . '.csv';
+    $dest = $uploadsDir . DIRECTORY_SEPARATOR . $unique;
+
+    if (!move_uploaded_file($info['tmp_name'], $dest)) {
+        throw new RuntimeException('No se pudo guardar el archivo en uploads/imports.');
+    }
+
+    return $dest;
+}
+
+/** Resolve an already-uploaded path coming from a hidden input. */
+function resolveStoredUploadPath($rawPath, $uploadsDir) {
+    $realBase = realpath($uploadsDir);
+    $real     = realpath($rawPath);
+    if ($realBase === false || $real === false) return null;
+    $baseWithSep = rtrim($realBase, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+    return strpos($real, $baseWithSep) === 0 ? $real : null;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     requireCsrf();
-
     $action = $_POST['action'];
-    $filePath = trim((string)($_POST['file_path'] ?? ''));
 
     try {
-        if ($action === 'import_familias') {
-            $importResult = ImportService::importFamiliasCsv($filePath);
-            registrarHistorial('IMPORTAR_FAMILIAS', "Se importó familias.csv desde $filePath.");
-        } elseif ($action === 'preview_familias') {
-            $importResult = ImportService::importFamiliasCsv($filePath, true);
-        } elseif ($action === 'import_equipos') {
-            $importResult = ImportService::importEquiposCsv($filePath);
-            registrarHistorial('IMPORTAR_EQUIPOS', "Se importó equipos.csv desde $filePath.");
-        } elseif ($action === 'preview_equipos') {
-            $importResult = ImportService::importEquiposCsv($filePath, true);
-        } elseif ($action === 'import_reparaciones') {
-            $importResult = ImportService::importReparacionesCsv($filePath);
-            registrarHistorial('IMPORTAR_REPARACIONES', "Se importó reparaciones.csv desde $filePath.");
-        } elseif ($action === 'preview_reparaciones') {
-            $importResult = ImportService::importReparacionesCsv($filePath, true);
+        // Preview: requires an uploaded file
+        if (preg_match('/^preview_(familias|equipos|reparaciones)$/', $action, $m)) {
+            $tipo = $m[1];
+            $path = persistUploadedCsv('csv_file', $uploadsDir);
+            $method = $importMethods[$tipo];
+            $sample = ImportService::previewRows($path);
+            $summary = ImportService::$method($path, true);
+            $previewType = $tipo;
+            $previewData = $sample + ['summary' => $summary, 'path' => $path];
+
+        // Import: requires a previously uploaded file referenced by hidden input
+        } elseif (preg_match('/^import_(familias|equipos|reparaciones)$/', $action, $m)) {
+            $tipo = $m[1];
+            $path = resolveStoredUploadPath((string)($_POST['uploaded_path'] ?? ''), $uploadsDir);
+            if (!$path) {
+                throw new RuntimeException('La ruta del archivo subido no es válida. Volvé a subir el archivo.');
+            }
+            $method = $importMethods[$tipo];
+            $importResult = ImportService::$method($path);
+            registrarHistorial('IMPORTAR_' . strtoupper($tipo), "Se importó {$tipo} desde " . basename($path) . '.');
+            @unlink($path); // cleanup once committed
+
+        } elseif ($action === 'cancel_preview') {
+            $path = resolveStoredUploadPath((string)($_POST['uploaded_path'] ?? ''), $uploadsDir);
+            if ($path) @unlink($path);
+
         } elseif ($action === 'reset_reparaciones') {
             $importResult = ImportService::resetReparaciones();
             registrarHistorial('RESET_REPARACIONES', 'Se eliminaron todas las reparaciones e historial asociado por FK.');
@@ -68,103 +140,203 @@ require_once __DIR__ . '/../public/includes/header.php';
 <?php if ($importResult): ?>
 <div class="alert alert-success">
     <strong><?= ($importResult['mode'] ?? '') === 'preview' ? 'Simulación completada.' : 'Operación completada.' ?></strong>
-    <div class="mt-2">
-        <?php foreach ($importResult as $key => $value): ?>
-            <div><strong><?= e(ucfirst($key)) ?>:</strong> <?= e((string)$value) ?></div>
+    <div class="mt-2 d-flex flex-wrap gap-2">
+        <?php foreach ($importResult as $key => $value):
+            if ($key === 'mode' || $key === 'state_map_detail') continue;
+            if (is_array($value)) {
+                $value = count($value) . ' items';
+            }
+        ?>
+            <span class="badge bg-white text-dark border"><strong><?= e(ucfirst($key)) ?>:</strong> <?= e((string)$value) ?></span>
         <?php endforeach; ?>
     </div>
+    <?php if (!empty($importResult['states_mapped']) && !empty($importResult['state_map_detail'])): ?>
+    <div class="mt-2 pt-2 border-top" style="font-size: 0.78rem;">
+        <i class="bi bi-diagram-3 me-1"></i>
+        <strong>Mapeo de estados aplicado</strong>
+        (<?= (int)$importResult['states_mapped'] ?> fila<?= (int)$importResult['states_mapped'] === 1 ? '' : 's' ?>):
+        <?php foreach (array_filter(array_map('trim', explode(',', $importResult['state_map_detail']))) as $pair): ?>
+            <code class="ms-1" style="font-size: 0.72rem; background: #fff; padding: 1px 4px; border-radius: 3px;"><?= e($pair) ?></code>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
 </div>
 <?php endif; ?>
 
-<div class="card shadow-sm mb-4 border-info">
-    <div class="card-body">
-        <h5 class="card-title"><i class="bi bi-diagram-3"></i> Mapeo de Estados del CSV</h5>
-        <p class="text-muted small mb-3">Las importaciones de reparaciones normalizan algunos estados del CSV para que encajen con el workflow actual.</p>
-        <div class="table-responsive">
-            <table class="table table-sm mb-0">
-                <thead>
-                    <tr><th>Estado CSV</th><th>Estado guardado</th></tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($estadoMappings as $from => $to): ?>
-                    <tr>
-                        <td><code><?= e($from) ?></code></td>
-                        <td><code><?= e($to) ?></code></td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
+
+<?php
+// Per-card descriptive content
+$cardMeta = [
+    'familias' => [
+        'icon'        => 'bi-tags',
+        'title'       => 'Familias',
+        'description' => 'Catálogo de familias.',
+        'note'        => null,
+        'border'      => '',
+    ],
+    'equipos' => [
+        'icon'        => 'bi-pc-display',
+        'title'       => 'Equipos',
+        'description' => 'Catálogo de equipos y su valor.',
+        'note'        => null,
+        'border'      => '',
+    ],
+    'reparaciones' => [
+        'icon'        => 'bi-tools',
+        'title'       => 'Reparaciones',
+        'description' => 'Reparaciones históricas. Si faltan salas, familias, equipos, técnicos o estados, también los crea.',
+        'note'        => 'Las filas que ya coinciden con una reparación existente (fecha, sala, UID, NPU, familia, equipo, técnico y estado) se omiten.',
+        'border'      => 'border-primary',
+    ],
+];
+?>
 
 <div class="row g-4">
+    <?php foreach (['familias', 'equipos', 'reparaciones'] as $tipo):
+        $meta = $cardMeta[$tipo];
+    ?>
     <div class="col-lg-4">
-        <div class="card shadow-sm h-100">
+        <div class="card shadow-sm h-100 <?= $meta['border'] ?>">
             <div class="card-body">
-                <h5 class="card-title"><i class="bi bi-tags"></i> Familias</h5>
-                <p class="text-muted small">Importa el catálogo de familias desde `familias.csv`.</p>
-                <form method="POST">
+                <h5 class="card-title"><i class="bi <?= $meta['icon'] ?>"></i> <?= e($meta['title']) ?></h5>
+                <p class="text-muted small"><?= e($meta['description']) ?></p>
+
+                <form method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
-                    <input type="hidden" name="action" value="import_familias">
+                    <input type="hidden" name="action" value="preview_<?= e($tipo) ?>">
                     <div class="mb-3">
-                        <label class="form-label">Archivo</label>
-                        <input type="text" name="file_path" class="form-control" value="<?= e($defaultFiles['familias']) ?>" required>
+                        <label class="form-label">Archivo CSV</label>
+                        <input type="file" name="csv_file" class="form-control" accept=".csv,text/csv" required>
+                        <small class="text-muted" style="font-size: 0.7rem;">Tamaño máximo: 10 MB.</small>
                     </div>
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-upload"></i> Importar familias</button>
-                        <button type="submit" name="action" value="preview_familias" class="btn btn-outline-secondary"><i class="bi bi-search"></i> Simular</button>
+                    <?php if ($meta['note']): ?>
+                    <div class="alert alert-info small mb-3" style="font-size: 0.78rem;">
+                        <i class="bi bi-info-circle me-1"></i><?= e($meta['note']) ?>
+                    </div>
+                    <?php endif; ?>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-eye"></i> Subir y previsualizar
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
+    <?php endforeach; ?>
+</div>
 
-    <div class="col-lg-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-body">
-                <h5 class="card-title"><i class="bi bi-pc-display"></i> Equipos</h5>
-                <p class="text-muted small">Importa o actualiza el catálogo de equipos y su valor desde `equipos.csv`.</p>
-                <form method="POST">
+<?php if ($previewType && $previewData !== null):
+    $headers = $previewData['headers'];
+    $rows    = $previewData['rows'];
+    $total   = $previewData['total'];
+    $shown   = $previewData['displayed'];
+    $summary = $previewData['summary'];
+    $meta    = $cardMeta[$previewType];
+?>
+<div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius: 10px;">
+            <div class="modal-header py-2 px-3">
+                <h6 class="modal-title fw-bold" style="font-size: 0.92rem;">
+                    <i class="bi <?= $meta['icon'] ?> me-1"></i>
+                    Previsualización: <?= e($meta['title']) ?>
+                </h6>
+                <form method="POST" class="m-0">
                     <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
-                    <input type="hidden" name="action" value="import_equipos">
-                    <div class="mb-3">
-                        <label class="form-label">Archivo</label>
-                        <input type="text" name="file_path" class="form-control" value="<?= e($defaultFiles['equipos']) ?>" required>
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-upload"></i> Importar equipos</button>
-                        <button type="submit" name="action" value="preview_equipos" class="btn btn-outline-secondary"><i class="bi bi-search"></i> Simular</button>
-                    </div>
+                    <input type="hidden" name="action" value="cancel_preview">
+                    <input type="hidden" name="uploaded_path" value="<?= e($previewData['path']) ?>">
+                    <button type="submit" class="btn-close" aria-label="Cerrar"></button>
                 </form>
             </div>
-        </div>
-    </div>
 
-    <div class="col-lg-4">
-        <div class="card shadow-sm h-100 border-primary">
-            <div class="card-body">
-                <h5 class="card-title"><i class="bi bi-tools"></i> Reparaciones</h5>
-                <p class="text-muted small">Importa reparaciones históricas. Si faltan salas, familias, equipos, técnicos o estados, también los crea.</p>
-                <form method="POST">
+            <div class="modal-body p-3">
+                <div class="alert alert-light border d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2 py-2 px-2" style="font-size: 0.72rem;">
+                    <div>
+                        <i class="bi bi-file-earmark-spreadsheet me-1"></i>
+                        <strong><?= e(basename($previewData['path'])) ?></strong>
+                        · <span class="text-muted"><?= number_format($total, 0, ',', '.') ?> filas</span>
+                    </div>
+                    <div class="text-muted" style="font-size: 0.68rem;">
+                        <?php foreach ($summary as $k => $v):
+                            if ($k === 'mode' || $k === 'state_map_detail') continue;
+                            if (is_array($v)) $v = count($v) . ' items';
+                        ?>
+                            <span class="badge bg-light text-dark border me-1" style="font-weight: 500;"><?= e(ucfirst($k)) ?>: <strong><?= e((string)$v) ?></strong></span>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <?php if (!empty($summary['states_mapped']) && !empty($summary['state_map_detail'])): ?>
+                <div class="alert alert-warning border-0 py-2 px-2 mb-2" style="font-size: 0.72rem; background: #fef9c3;">
+                    <i class="bi bi-diagram-3 me-1 text-warning"></i>
+                    <strong>Mapeo de estados aplicado</strong>
+                    (<?= (int)$summary['states_mapped'] ?> fila<?= (int)$summary['states_mapped'] === 1 ? '' : 's' ?>):
+                    <?php
+                        $pairs = array_filter(array_map('trim', explode(',', $summary['state_map_detail'])));
+                        foreach ($pairs as $pair):
+                    ?>
+                        <code class="ms-1" style="font-size: 0.68rem; background: #fff; padding: 1px 4px; border-radius: 3px;"><?= e($pair) ?></code>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+
+                <div class="table-responsive" style="max-height: 320px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px;">
+                    <table class="table table-sm mb-0" style="font-size: 0.7rem;">
+                        <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;">
+                            <tr>
+                                <th style="width: 28px; padding: 0.3rem 0.4rem;">#</th>
+                                <?php foreach ($headers as $h): ?>
+                                    <th style="padding: 0.3rem 0.4rem;"><?= e($h) ?></th>
+                                <?php endforeach; ?>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($rows as $i => $row): ?>
+                                <tr>
+                                    <td class="text-muted" style="padding: 0.25rem 0.4rem;"><?= $i + 1 ?></td>
+                                    <?php foreach ($headers as $j => $h): ?>
+                                        <td style="padding: 0.25rem 0.4rem;"><?= e((string)($row[$j] ?? '')) ?></td>
+                                    <?php endforeach; ?>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php if ($shown < $total): ?>
+                <p class="text-muted small mb-0 mt-2" style="font-size: 0.68rem;">
+                    Mostrando primeras <?= $shown ?> filas de <?= number_format($total, 0, ',', '.') ?>.
+                </p>
+                <?php endif; ?>
+            </div>
+
+            <div class="modal-footer py-2 px-3 d-flex gap-2 justify-content-end">
+                <form method="POST" class="m-0">
                     <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
-                    <input type="hidden" name="action" value="import_reparaciones">
-                    <div class="mb-3">
-                        <label class="form-label">Archivo</label>
-                        <input type="text" name="file_path" class="form-control" value="<?= e($defaultFiles['reparaciones']) ?>" required>
-                    </div>
-                    <div class="alert alert-light small mb-3">
-                        La importación omite filas que ya coinciden con una reparación existente usando fecha, sala, UID, NPU, familia, equipo, técnico y estado.
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-upload"></i> Importar reparaciones</button>
-                        <button type="submit" name="action" value="preview_reparaciones" class="btn btn-outline-secondary"><i class="bi bi-search"></i> Simular</button>
-                    </div>
+                    <input type="hidden" name="action" value="cancel_preview">
+                    <input type="hidden" name="uploaded_path" value="<?= e($previewData['path']) ?>">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                </form>
+                <form method="POST" class="m-0">
+                    <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
+                    <input type="hidden" name="action" value="import_<?= e($previewType) ?>">
+                    <input type="hidden" name="uploaded_path" value="<?= e($previewData['path']) ?>">
+                    <button type="submit" class="btn btn-success btn-sm fw-bold" style="font-size: 0.75rem; padding: 0.3rem 0.7rem;">
+                        <i class="bi bi-check2-circle"></i> Confirmar
+                    </button>
                 </form>
             </div>
         </div>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('previewModal')).show();
+});
+</script>
+<?php endif; ?>
 
 <div class="card shadow-sm border-danger mt-4">
     <div class="card-body">

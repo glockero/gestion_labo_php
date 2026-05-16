@@ -1,0 +1,12 @@
+# User-uploaded files (CSV imports, backups, etc.)
+uploads/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+
+# Local config overrides
+app/config.local.php
