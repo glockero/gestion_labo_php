@@ -50,6 +50,15 @@ $allowed_estado_options = array_values(array_filter($estados_catalogo, function 
 }));
 $can_change_estado = $can_manage_rep && count($allowed_estado_options) > 1;
 
+// Build a map [estado_destino => requiere_comentario?] used by the JS to
+// decide whether to open the comment modal before submitting. The same
+// predicate is enforced server-side in api/reparacion_estado.php; this
+// avoids the prompt-then-422 round trip.
+$estados_requieren_comentario = [];
+foreach ($allowed_estado_options as $est) {
+    $estados_requieren_comentario[$est['nombre']] = estadoTransitionRequiresComment($rep['estado'], $est['nombre']);
+}
+
 // Helper
 function getBadgeClass($estado) {
     $estado = normalizeEstadoLabel($estado);
@@ -321,6 +330,32 @@ function getHistorialVisual($accion) {
         font-size: 13px;
     }
 
+    /* Page-wide loading overlay used during fetch round-trips */
+    .page-loading-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(248, 250, 252, 0.65);
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(2px);
+    }
+    .page-loading-overlay.is-active { display: flex; }
+    .page-loading-overlay .spinner-border {
+        width: 2.5rem;
+        height: 2.5rem;
+        color: var(--primary-blue);
+    }
+
+    /* Autosize textareas grow with content but cap at ~10 rows */
+    textarea.autosize {
+        resize: none;
+        min-height: 38px;
+        max-height: 220px;
+        overflow-y: auto;
+    }
+
     /* NPU history badge (clickable) */
     .npu-history-btn {
         font-size: 11px;
@@ -432,9 +467,11 @@ function getHistorialVisual($accion) {
                     <div class="bg-light border rounded p-3 mb-3" style="max-height: 250px; overflow-y: auto; white-space: pre-wrap; font-size: 13.5px;" id="observacionesText"><?= e($rep['observaciones']) ?: '<span class="text-muted fst-italic">Sin comentarios registrados.</span>' ?></div>
                     
                     <form id="formComentario">
-                        <div class="input-group">
-                            <input type="text" id="nuevoComentario" class="form-control form-control-compact" placeholder="Agregar una nota técnica o avance..." <?= $can_manage_rep ? '' : 'disabled' ?>>
-                            <button class="btn btn-outline-primary btn-compact border-start-0" type="submit" id="btnComentario" <?= $can_manage_rep ? '' : 'disabled' ?> style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                        <div class="d-flex gap-2 align-items-end">
+                            <textarea id="nuevoComentario" class="form-control form-control-compact autosize flex-grow-1"
+                                      placeholder="Agregar una nota técnica o avance... (Ctrl+Enter para enviar)"
+                                      rows="1" <?= $can_manage_rep ? '' : 'disabled' ?>></textarea>
+                            <button class="btn btn-outline-primary btn-compact" type="submit" id="btnComentario" <?= $can_manage_rep ? '' : 'disabled' ?>>
                                 <i class="bi bi-send me-1"></i>Enviar
                             </button>
                         </div>
@@ -577,6 +614,47 @@ function getHistorialVisual($accion) {
 <script>
 const reparacionId = <?= $rep['id'] ?>;
 const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '<?= generateCsrfToken() ?>';
+// Map { "ESTADO_DESTINO": true|false } generated server-side from
+// estadoTransitionRequiresComment() — same source of truth as the API.
+const ESTADO_REQUIERE_COMENTARIO = <?= json_encode($estados_requieren_comentario, JSON_UNESCAPED_UNICODE) ?>;
+
+// --- Page loading overlay used during any fetch round-trip ---
+const pageLoading = (() => {
+    const el = document.createElement('div');
+    el.className = 'page-loading-overlay';
+    el.innerHTML = '<div class="spinner-border" role="status"><span class="visually-hidden">Cargando...</span></div>';
+    document.body.appendChild(el);
+    return {
+        show: () => el.classList.add('is-active'),
+        hide: () => el.classList.remove('is-active'),
+    };
+})();
+
+// --- Autosize: grow a textarea with its content (capped by CSS max-height) ---
+function autosize(el) {
+    if (!el) return;
+    const adjust = () => {
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 220) + 'px';
+    };
+    el.addEventListener('input', adjust);
+    requestAnimationFrame(adjust);
+}
+document.querySelectorAll('textarea.autosize').forEach(autosize);
+
+// --- Reload preserving scroll position across the round-trip ---
+const SCROLL_KEY = 'rd_scroll_' + reparacionId;
+function reloadPreservingScroll() {
+    sessionStorage.setItem(SCROLL_KEY, window.scrollY);
+    location.reload();
+}
+window.addEventListener('DOMContentLoaded', () => {
+    const y = sessionStorage.getItem(SCROLL_KEY);
+    if (y !== null) {
+        sessionStorage.removeItem(SCROLL_KEY);
+        requestAnimationFrame(() => window.scrollTo({ top: parseInt(y, 10), behavior: 'instant' in window ? 'instant' : 'auto' }));
+    }
+});
 
 /**
  * Promise-based replacement for window.prompt() using a Bootstrap modal.
@@ -646,27 +724,35 @@ function promptModal({ title, message, placeholder = '', confirmLabel = 'Confirm
 
 const formComentario = document.getElementById('formComentario');
 if (formComentario) {
+    const inputComentario = document.getElementById('nuevoComentario');
     formComentario.addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btnComentario');
-        const input = document.getElementById('nuevoComentario');
-        const val = input.value.trim();
-        if(!val || btn.disabled) return;
-        
+        const val = inputComentario.value.trim();
+        if (!val || btn.disabled) return;
+
         btn.disabled = true;
+        pageLoading.show();
         try {
-            const res = await fetchApi(`../api/reparacion_comentario.php`, {
+            await fetchApi(`../api/reparacion_comentario.php`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
                 body: JSON.stringify({ id: reparacionId, comentario: val })
             });
-            document.getElementById('observacionesText').innerText = res.observaciones;
-            input.value = '';
-            location.reload();
-        } catch(err) {
-            showToast('Error al guardar comentario', 'danger');
-        } finally {
+            inputComentario.value = '';
+            reloadPreservingScroll();
+        } catch (err) {
+            pageLoading.hide();
             btn.disabled = false;
+            showToast('Error al guardar comentario', 'danger');
+        }
+    });
+
+    // Ctrl/Cmd+Enter inside the textarea submits the form
+    inputComentario?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            formComentario.requestSubmit();
         }
     });
 }
@@ -677,8 +763,7 @@ if (selectEstado && !selectEstado.disabled) {
         const newEstado = e.target.value;
         let comentario = '';
 
-        const estadosConComentarioObligatorio = ['REPARADO', 'SIN REPARACION', 'PENDIENTE DE REPUESTO', 'ENTREGADO', 'PEND. DE REVISION'];
-        if (estadosConComentarioObligatorio.includes(newEstado)) {
+        if (ESTADO_REQUIERE_COMENTARIO[newEstado]) {
             comentario = await promptModal({
                 title: 'Cambio de estado',
                 message: `El estado va a cambiar a "${newEstado}". Detallá el motivo o el resultado para dejar constancia en el historial.`,
@@ -693,16 +778,18 @@ if (selectEstado && !selectEstado.disabled) {
             }
         }
 
+        pageLoading.show();
         try {
             await fetchApi(`../api/reparacion_estado.php`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
                 body: JSON.stringify({ id: reparacionId, estado: newEstado, comentario: comentario })
             });
-            location.reload();
-        } catch(err) {
+            reloadPreservingScroll();
+        } catch (err) {
+            pageLoading.hide();
             showToast('Error al cambiar estado', 'danger');
-            location.reload();
+            reloadPreservingScroll();
         }
     });
 }
@@ -711,16 +798,18 @@ const selectTecnico = document.getElementById('selectTecnico');
 if (selectTecnico) {
     selectTecnico.addEventListener('change', async (e) => {
         const newTecnicoId = e.target.value;
+        pageLoading.show();
         try {
             await fetchApi(`../api/reparacion_tecnico.php`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
                 body: JSON.stringify({ id: reparacionId, tecnico_id: newTecnicoId })
             });
-            location.reload();
-        } catch(err) {
+            reloadPreservingScroll();
+        } catch (err) {
+            pageLoading.hide();
             showToast('Error al cambiar técnico', 'danger');
-            location.reload();
+            reloadPreservingScroll();
         }
     });
 }
@@ -730,14 +819,18 @@ if (btnTogglePrioridad && !btnTogglePrioridad.disabled) {
     btnTogglePrioridad.addEventListener('click', async () => {
         const currentUrgente = '<?= $rep['urgente'] ?>';
         const newUrgente = currentUrgente === 'SI' ? 'NO' : 'SI';
+        btnTogglePrioridad.disabled = true;
+        pageLoading.show();
         try {
             await fetchApi(`../api/reparacion_prioridad.php`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
                 body: JSON.stringify({ id: reparacionId, urgente: newUrgente })
             });
-            location.reload();
-        } catch(err) {
+            reloadPreservingScroll();
+        } catch (err) {
+            pageLoading.hide();
+            btnTogglePrioridad.disabled = false;
             showToast('Error al cambiar prioridad', 'danger');
         }
     });
@@ -756,14 +849,18 @@ if (btnDevolverReparacion && !btnDevolverReparacion.disabled) {
         });
         if (motivo === null) return;
 
+        btnDevolverReparacion.disabled = true;
+        pageLoading.show();
         try {
             await fetchApi(`../api/reparacion_devolver.php`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
                 body: JSON.stringify({ id: reparacionId, comentario: motivo })
             });
-            location.reload();
+            reloadPreservingScroll();
         } catch (err) {
+            pageLoading.hide();
+            btnDevolverReparacion.disabled = false;
             showToast('Error al devolver la reparación', 'danger');
         }
     });
