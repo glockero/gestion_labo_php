@@ -85,3 +85,32 @@ function formatArs($value) {
 
     return '$ ' . number_format((float)$clean, 2, ',', '.');
 }
+
+/**
+ * Render a compact human-readable age string in Spanish from a datetime.
+ * Examples: "Hoy", "Ayer", "3 dias", "2 sem", "4 meses".
+ */
+function formatAgeLabel($datetimeStr) {
+    if (!$datetimeStr) return '';
+
+    try {
+        $start = new DateTime($datetimeStr);
+        $now = new DateTime();
+        $diff = $start->diff($now);
+    } catch (Exception $e) {
+        return '';
+    }
+
+    $days = (int)$diff->days;
+    if ($days <= 0) return 'Hoy';
+    if ($days === 1) return 'Ayer';
+    if ($days < 7) return $days . ' dias';
+
+    $weeks = (int)floor($days / 7);
+    if ($weeks < 5) {
+        return $weeks . ' sem';
+    }
+
+    $months = max(1, (int)floor($days / 30));
+    return $months . ' mes' . ($months === 1 ? '' : 'es');
+}

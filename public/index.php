@@ -98,6 +98,9 @@ $pdo = getDbConnection();
 $anios_opt = $pdo->query("SELECT DISTINCT YEAR(fecha) as anio FROM reparaciones WHERE fecha IS NOT NULL ORDER BY anio DESC")->fetchAll();
 
 $tab_counts = ReparacionModel::getTabCounts($filtros);
+$mis_pendientes = $is_tecnico
+    ? ReparacionModel::getTecnicoPendientesSnapshot((int)($_SESSION['tecnico_id'] ?? 0), 6)
+    : ['totales' => ['abiertas' => 0, 'urgentes' => 0, 'en_reparacion' => 0, 'vencidas_7' => 0, 'max_dias' => 0], 'items' => []];
 
 // Map of [npu => total_ingresos] for NPUs that appear more than once across
 // the whole repairs table. Only NPUs present in the current page are queried.
@@ -664,6 +667,330 @@ if (count($npu_list) > 0) {
         color: #fff;
     }
     .urg-toggle.is-active input { accent-color: #fff; }
+
+    /* Tecnico panel */
+    .tech-panel {
+        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+        border: 1px solid #dbeafe;
+        border-radius: 12px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        margin-bottom: 1rem;
+        overflow: hidden;
+    }
+
+    .tech-panel-head {
+        align-items: flex-start;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        gap: 0.85rem;
+        justify-content: space-between;
+        padding: 0.9rem 1rem 0.75rem;
+    }
+
+    .tech-panel-title {
+        color: #0f172a;
+        font-size: 0.98rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .tech-panel-subtitle {
+        color: #64748b;
+        font-size: 0.78rem;
+        margin: 0.2rem 0 0;
+    }
+
+    .tech-panel-body {
+        padding: 0.9rem 1rem 1rem;
+    }
+
+    .tech-panel.is-collapsed .tech-panel-head {
+        border-bottom-color: transparent;
+    }
+
+    .tech-panel-toggle {
+        align-items: center;
+        background: #fff;
+        border: 1px solid #dbe3ef;
+        border-radius: 8px;
+        color: #475569;
+        display: inline-flex;
+        font-size: 0.76rem;
+        font-weight: 700;
+        gap: 0.42rem;
+        line-height: 1;
+        padding: 0.42rem 0.68rem;
+        transition: all 0.15s ease;
+    }
+
+    .tech-panel-toggle:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+        color: #0f172a;
+    }
+
+    .tech-panel.is-collapsed .tech-panel-toggle {
+        background: #dbeafe;
+        border-color: #60a5fa;
+        color: #1d4ed8;
+        box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.08);
+    }
+
+    .tech-panel.is-collapsed .tech-panel-toggle:hover {
+        background: #bfdbfe;
+        border-color: #3b82f6;
+        color: #1d4ed8;
+    }
+
+    .tech-panel-toggle .bi {
+        font-size: 0.82rem;
+        transition: transform 0.18s ease;
+    }
+
+    .tech-panel.is-collapsed .tech-panel-toggle .bi {
+        transform: rotate(-90deg);
+    }
+
+    .tech-panel-body-wrap {
+        display: grid;
+        grid-template-rows: 1fr;
+        transition: grid-template-rows 0.2s ease;
+    }
+
+    .tech-panel.is-collapsed .tech-panel-body-wrap {
+        grid-template-rows: 0fr;
+    }
+
+    .tech-panel-body-inner {
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .tech-kpi-grid {
+        display: grid;
+        gap: 0.65rem;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        margin-bottom: 0.9rem;
+    }
+
+    .tech-kpi {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        min-width: 0;
+        padding: 0.7rem 0.8rem;
+    }
+
+    .tech-kpi-label {
+        color: #64748b;
+        font-size: 0.69rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+        text-transform: uppercase;
+    }
+
+    .tech-kpi-value {
+        color: #0f172a;
+        font-size: 1.2rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .tech-kpi-note {
+        color: #64748b;
+        font-size: 0.72rem;
+        margin-top: 0.2rem;
+    }
+
+    .tech-kpi.is-urgent {
+        background: #fff7ed;
+        border-color: #fdba74;
+    }
+
+    .tech-kpi.is-urgent .tech-kpi-value {
+        color: #c2410c;
+    }
+
+    .tech-kpi.is-aged {
+        background: #fef2f2;
+        border-color: #fca5a5;
+    }
+
+    .tech-kpi.is-aged .tech-kpi-value {
+        color: #b91c1c;
+    }
+
+    .tech-task-list {
+        display: grid;
+        gap: 0.65rem;
+    }
+
+    .tech-task {
+        align-items: flex-start;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: minmax(0, 1fr) auto;
+        padding: 0.8rem 0.9rem;
+    }
+
+    .tech-task.is-urgent {
+        border-color: #fca5a5;
+        box-shadow: inset 3px 0 0 #ef4444;
+    }
+
+    .tech-task-main {
+        min-width: 0;
+    }
+
+    .tech-task-topline {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .tech-priority-chip,
+    .tech-age-chip {
+        align-items: center;
+        border-radius: 999px;
+        display: inline-flex;
+        font-size: 0.69rem;
+        font-weight: 700;
+        gap: 0.25rem;
+        line-height: 1;
+        padding: 0.28rem 0.5rem;
+        text-transform: uppercase;
+    }
+
+    .tech-priority-chip {
+        background: #eff6ff;
+        color: #1d4ed8;
+    }
+
+    .tech-priority-chip.is-urgent {
+        background: #fef2f2;
+        color: #b91c1c;
+    }
+
+    .tech-age-chip {
+        background: #f8fafc;
+        color: #475569;
+    }
+
+    .tech-age-chip.is-aged {
+        background: #fff7ed;
+        color: #c2410c;
+    }
+
+    .tech-task-title {
+        color: #0f172a;
+        display: block;
+        font-size: 0.92rem;
+        font-weight: 700;
+        margin-bottom: 0.18rem;
+        overflow: hidden;
+        text-decoration: none;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .tech-task-title:hover {
+        color: #1d4ed8;
+    }
+
+    .tech-task-meta {
+        color: #64748b;
+        display: flex;
+        flex-wrap: wrap;
+        font-size: 0.76rem;
+        gap: 0.3rem 0.75rem;
+        margin-bottom: 0.3rem;
+    }
+
+    .tech-task-meta span {
+        align-items: center;
+        display: inline-flex;
+        gap: 0.28rem;
+        min-width: 0;
+    }
+
+    .tech-task-notes {
+        color: #475569;
+        font-size: 0.78rem;
+        line-height: 1.35;
+        margin: 0;
+    }
+
+    .tech-task-notes span {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+    }
+
+    .tech-task-side {
+        align-items: flex-end;
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+        min-width: 112px;
+    }
+
+    .tech-task-side .status-pill {
+        max-width: none;
+        min-width: 0;
+        width: 100%;
+    }
+
+    .tech-task-action {
+        font-size: 0.76rem;
+        font-weight: 700;
+        padding: 0.38rem 0.72rem;
+    }
+
+    .tech-empty {
+        background: #fff;
+        border: 1px dashed #cbd5e1;
+        border-radius: 10px;
+        color: #64748b;
+        padding: 1rem;
+        text-align: center;
+    }
+
+    @media (max-width: 991px) {
+        .tech-kpi-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 767px) {
+        .tech-panel-head,
+        .tech-task {
+            grid-template-columns: 1fr;
+        }
+
+        .tech-panel-head {
+            display: block;
+        }
+
+        .tech-kpi-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .tech-task-side {
+            align-items: stretch;
+            min-width: 0;
+        }
+
+        .tech-panel-toggle span {
+            display: none;
+        }
+    }
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -775,6 +1102,111 @@ if (count($npu_list) > 0) {
         <i class="bi bi-x-circle me-1"></i>Limpiar todos
     </a>
 </div>
+<?php endif; ?>
+
+<?php if ($is_tecnico): ?>
+<?php
+    $totales_tecnico = $mis_pendientes['totales'];
+    $items_tecnico = $mis_pendientes['items'];
+?>
+<section class="tech-panel">
+    <div class="tech-panel-head">
+        <div>
+            <h3 class="tech-panel-title"><i class="bi bi-person-workspace text-primary me-1"></i>Mis pendientes</h3>
+            <p class="tech-panel-subtitle">Vista rapida para priorizar urgentes, trabajo activo y reparaciones con mayor antiguedad.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="index.php?estado=MIS_REPARACIONES" class="btn btn-light border btn-sm fw-semibold">
+                <i class="bi bi-list-task me-1"></i>Ver bandeja
+            </a>
+            <button type="button" class="tech-panel-toggle" id="techPanelToggle" aria-expanded="true" aria-controls="techPanelBodyWrap">
+                <i class="bi bi-chevron-down"></i>
+                <span>Ocultar</span>
+            </button>
+        </div>
+    </div>
+    <div class="tech-panel-body-wrap" id="techPanelBodyWrap">
+        <div class="tech-panel-body-inner">
+        <div class="tech-panel-body">
+        <div class="tech-kpi-grid">
+            <div class="tech-kpi">
+                <div class="tech-kpi-label">Abiertas</div>
+                <div class="tech-kpi-value"><?= number_format($totales_tecnico['abiertas']) ?></div>
+                <div class="tech-kpi-note">Asignadas a tu usuario</div>
+            </div>
+            <div class="tech-kpi is-urgent">
+                <div class="tech-kpi-label">Urgentes</div>
+                <div class="tech-kpi-value"><?= number_format($totales_tecnico['urgentes']) ?></div>
+                <div class="tech-kpi-note">Para atacar primero</div>
+            </div>
+            <div class="tech-kpi">
+                <div class="tech-kpi-label">En reparacion</div>
+                <div class="tech-kpi-value"><?= number_format($totales_tecnico['en_reparacion']) ?></div>
+                <div class="tech-kpi-note">Ya iniciadas</div>
+            </div>
+            <div class="tech-kpi <?= $totales_tecnico['vencidas_7'] > 0 ? 'is-aged' : '' ?>">
+                <div class="tech-kpi-label">7+ dias</div>
+                <div class="tech-kpi-value"><?= number_format($totales_tecnico['vencidas_7']) ?></div>
+                <div class="tech-kpi-note">Maximo: <?= (int)$totales_tecnico['max_dias'] ?> dias</div>
+            </div>
+        </div>
+
+        <?php if (!empty($items_tecnico)): ?>
+        <div class="tech-task-list">
+            <?php foreach ($items_tecnico as $item): ?>
+                <?php
+                    $itemEstado = strtoupper((string)$item['estado']);
+                    $itemUrgente = ($item['urgente'] ?? 'NO') === 'SI';
+                    $itemDias = max(0, (int)($item['dias_abierta'] ?? 0));
+                    $itemAged = $itemDias >= 7;
+                    $badge_class = 'status-secondary';
+                    if (strpos($itemEstado, 'REPARADO') !== false) $badge_class = 'status-success';
+                    elseif (strpos($itemEstado, 'PEND') !== false) $badge_class = 'status-warning';
+                    elseif (strpos($itemEstado, 'SIN REPARACION') !== false) $badge_class = 'status-danger';
+                    elseif (strpos($itemEstado, 'PRUEBA') !== false || strpos($itemEstado, 'REPARACION') !== false) $badge_class = 'status-info';
+                ?>
+                <article class="tech-task <?= $itemUrgente ? 'is-urgent' : '' ?>">
+                    <div class="tech-task-main">
+                        <div class="tech-task-topline">
+                            <span class="tech-priority-chip <?= $itemUrgente ? 'is-urgent' : '' ?>">
+                                <i class="bi <?= $itemUrgente ? 'bi-exclamation-triangle-fill' : 'bi-flag' ?>"></i>
+                                <?= $itemUrgente ? 'Urgente' : 'Normal' ?>
+                            </span>
+                            <span class="tech-age-chip <?= $itemAged ? 'is-aged' : '' ?>">
+                                <i class="bi bi-clock-history"></i><?= e(formatAgeLabel($item['fecha_referencia'] ?? $item['fecha'])) ?>
+                            </span>
+                        </div>
+                        <a href="reparacion_detalle.php?id=<?= e($item['id']) ?>" class="tech-task-title">
+                            <?= e($item['equipo']) ?>
+                        </a>
+                        <div class="tech-task-meta">
+                            <span><i class="bi bi-geo-alt-fill text-danger"></i><?= e($item['sala']) ?></span>
+                            <?php if (!empty($item['uid'])): ?><span><i class="bi bi-upc-scan"></i>UID <?= e($item['uid']) ?></span><?php endif; ?>
+                            <?php if (!empty($item['npu'])): ?><span><i class="bi bi-tag"></i>NPU <?= e($item['npu']) ?></span><?php endif; ?>
+                        </div>
+                        <p class="tech-task-notes">
+                            <span><?= e(trim((string)($item['observaciones'] ?? '')) ?: 'Sin observaciones cargadas.') ?></span>
+                        </p>
+                    </div>
+                    <div class="tech-task-side">
+                        <span class="status-pill <?= $badge_class ?>"><?= e($item['estado']) ?></span>
+                        <a href="reparacion_detalle.php?id=<?= e($item['id']) ?>" class="btn btn-primary tech-task-action">
+                            Abrir ficha
+                        </a>
+                    </div>
+                </article>
+            <?php endforeach; ?>
+        </div>
+        <?php else: ?>
+        <div class="tech-empty">
+            <div class="fw-bold text-dark mb-1">No tenes pendientes activos.</div>
+            <div class="small">Cuando se te asignen reparaciones van a aparecer aca ordenadas por urgencia y antiguedad.</div>
+        </div>
+        <?php endif; ?>
+        </div>
+        </div>
+    </div>
+</section>
 <?php endif; ?>
 
 <!-- Nav Tabs (Chips) -->
@@ -1196,6 +1628,60 @@ document.getElementById('perPageSelect')?.addEventListener('change', function ()
         if (!btn) return;
         e.preventDefault();
         openNpuHistory(btn.dataset.npu, btn.dataset.currentId);
+    });
+})();
+
+(function () {
+    const panel = document.querySelector('.tech-panel');
+    const toggle = document.getElementById('techPanelToggle');
+    if (!panel || !toggle) return;
+
+    const label = toggle.querySelector('span');
+    const storageKey = 'laboratorio:tech-panel-collapsed';
+    const autoCollapseDelay = 4000;
+    let autoCollapseTimer = null;
+
+    function syncState(collapsed) {
+        panel.classList.toggle('is-collapsed', collapsed);
+        toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        if (label) label.textContent = collapsed ? 'Mostrar' : 'Ocultar';
+    }
+
+    function clearAutoCollapseTimer() {
+        if (autoCollapseTimer) {
+            clearTimeout(autoCollapseTimer);
+            autoCollapseTimer = null;
+        }
+    }
+
+    function scheduleAutoCollapse() {
+        clearAutoCollapseTimer();
+        if (panel.classList.contains('is-collapsed')) return;
+        autoCollapseTimer = setTimeout(() => {
+            syncState(true);
+            localStorage.setItem(storageKey, '1');
+        }, autoCollapseDelay);
+    }
+
+    const storedState = localStorage.getItem(storageKey);
+    syncState(storedState === null ? true : storedState === '1');
+
+    toggle.addEventListener('click', () => {
+        clearAutoCollapseTimer();
+        const collapsed = !panel.classList.contains('is-collapsed');
+        syncState(collapsed);
+        localStorage.setItem(storageKey, collapsed ? '1' : '0');
+    });
+
+    panel.addEventListener('mouseenter', clearAutoCollapseTimer);
+    panel.addEventListener('mouseleave', scheduleAutoCollapse);
+    panel.addEventListener('focusin', clearAutoCollapseTimer);
+    panel.addEventListener('focusout', () => {
+        requestAnimationFrame(() => {
+            if (!panel.contains(document.activeElement)) {
+                scheduleAutoCollapse();
+            }
+        });
     });
 })();
 </script>

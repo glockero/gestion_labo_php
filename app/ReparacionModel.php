@@ -143,6 +143,92 @@ class ReparacionModel {
         $stmt->execute([$id]);
         return $stmt->fetchAll();
     }
+
+    /**
+     * Returns a compact technician workload snapshot for the "Mis pendientes"
+     * panel on the main board.
+     *
+     * [
+     *   'totales' => ['abiertas' => int, 'urgentes' => int, ...],
+     *   'items' => [ ... prioritized rows ... ]
+     * ]
+     */
+    public static function getTecnicoPendientesSnapshot($tecnicoId, $limit = 6) {
+        $tecnicoId = (int)$tecnicoId;
+        if ($tecnicoId <= 0) {
+            return [
+                'totales' => ['abiertas' => 0, 'urgentes' => 0, 'en_reparacion' => 0, 'vencidas_7' => 0, 'max_dias' => 0],
+                'items' => [],
+            ];
+        }
+
+        $pdo = getDbConnection();
+
+        $sqlResumen = "
+            SELECT
+                COUNT(*) AS abiertas,
+                SUM(CASE WHEN r.urgente = 'SI' THEN 1 ELSE 0 END) AS urgentes,
+                SUM(CASE WHEN UPPER(r.estado) = 'EN REPARACION' OR UPPER(r.estado) LIKE 'EN PRUEBA%' THEN 1 ELSE 0 END) AS en_reparacion,
+                SUM(CASE
+                    WHEN TIMESTAMPDIFF(DAY, COALESCE(r.fecha_pendiente, r.fecha_en_reparacion, r.fecha), NOW()) >= 7
+                    THEN 1 ELSE 0
+                END) AS vencidas_7,
+                MAX(TIMESTAMPDIFF(DAY, COALESCE(r.fecha_pendiente, r.fecha_en_reparacion, r.fecha), NOW())) AS max_dias
+            FROM reparaciones r
+            WHERE r.tecnico_id = ?
+              AND UPPER(r.estado) NOT LIKE 'REPARADO%'
+              AND UPPER(r.estado) NOT LIKE 'SIN REPARACION%'
+              AND UPPER(r.estado) <> 'ENTREGADO'
+        ";
+        $stmtResumen = $pdo->prepare($sqlResumen);
+        $stmtResumen->execute([$tecnicoId]);
+        $totales = $stmtResumen->fetch() ?: [];
+
+        $sqlItems = "
+            SELECT
+                r.id,
+                r.fecha,
+                r.sala,
+                r.uid,
+                r.npu,
+                r.equipo,
+                r.urgente,
+                r.estado,
+                r.observaciones,
+                r.fecha_en_reparacion,
+                r.fecha_pendiente,
+                COALESCE(r.fecha_pendiente, r.fecha_en_reparacion, r.fecha) AS fecha_referencia,
+                TIMESTAMPDIFF(DAY, COALESCE(r.fecha_pendiente, r.fecha_en_reparacion, r.fecha), NOW()) AS dias_abierta
+            FROM reparaciones r
+            WHERE r.tecnico_id = ?
+              AND UPPER(r.estado) NOT LIKE 'REPARADO%'
+              AND UPPER(r.estado) NOT LIKE 'SIN REPARACION%'
+              AND UPPER(r.estado) <> 'ENTREGADO'
+            ORDER BY
+                CASE WHEN r.urgente = 'SI' THEN 0 ELSE 1 END,
+                CASE
+                    WHEN UPPER(r.estado) = 'PEND. DE REVISION' THEN 0
+                    WHEN UPPER(r.estado) = 'EN REPARACION' OR UPPER(r.estado) LIKE 'EN PRUEBA%' THEN 1
+                    ELSE 2
+                END,
+                TIMESTAMPDIFF(DAY, COALESCE(r.fecha_pendiente, r.fecha_en_reparacion, r.fecha), NOW()) DESC,
+                r.fecha ASC,
+                r.id DESC
+            LIMIT " . (int)$limit;
+        $stmtItems = $pdo->prepare($sqlItems);
+        $stmtItems->execute([$tecnicoId]);
+
+        return [
+            'totales' => [
+                'abiertas' => (int)($totales['abiertas'] ?? 0),
+                'urgentes' => (int)($totales['urgentes'] ?? 0),
+                'en_reparacion' => (int)($totales['en_reparacion'] ?? 0),
+                'vencidas_7' => (int)($totales['vencidas_7'] ?? 0),
+                'max_dias' => max(0, (int)($totales['max_dias'] ?? 0)),
+            ],
+            'items' => $stmtItems->fetchAll(),
+        ];
+    }
     
     public static function checkNpuRepetido($npu, $exclude_id = null) {
         if (empty($npu)) return false;
