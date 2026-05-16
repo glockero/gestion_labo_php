@@ -61,6 +61,10 @@ $current_page = basename($_SERVER['PHP_SELF']);
             <i class="bi bi-graph-up-arrow"></i>
             <span>KPI DASHBOARD</span>
         </a>
+        <a href="<?= APP_URL ?>/../admin/metricas.php" class="sidebar-link <?= $current_page == 'metricas.php' ? 'active' : '' ?>">
+            <i class="bi bi-bar-chart-line"></i>
+            <span>MÉTRICAS</span>
+        </a>
     </div>
     <?php endif; ?>
 
