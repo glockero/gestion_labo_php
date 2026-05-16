@@ -620,6 +620,41 @@ function getHistorialVisual($accion) {
 
         <!-- Columna Derecha: Acciones Rápidas -->
         <div class="col-lg-4">
+            <!-- Asignación Técnico -->
+            <div class="dense-card">
+                <div class="card-body">
+                    <div class="text-muted text-uppercase fw-bold mb-2" style="font-size: 11px; letter-spacing: 0.05em;">Técnico Asignado</div>
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <?php if ($rep['tecnico_nombre']): ?>
+                            <div class="tech-avatar" style="background-color: <?= e(avatarColor($rep['tecnico_nombre'])) ?>;">
+                                <?= e(mb_strtoupper(mb_substr($rep['tecnico_nombre'], 0, 1, 'UTF-8'), 'UTF-8')) ?>
+                            </div>
+                            <span class="fw-bold text-dark" id="textTecnico" style="font-size: 14px;"><?= e($rep['tecnico_nombre']) ?></span>
+                        <?php else: ?>
+                            <div class="tech-avatar"><i class="bi bi-person-x-fill"></i></div>
+                            <span class="text-muted fst-italic" id="textTecnico" style="font-size: 14px;">Sin asignar</span>
+                        <?php endif; ?>
+                    </div>
+
+                    <?php if ($can_reassign_tecnico): ?>
+                    <label class="form-label text-muted mb-1" style="font-size: 12px;">Reasignar</label>
+                    <select id="selectTecnico" class="form-select form-select-compact w-100">
+                        <option value="">-- Quitar Asignación --</option>
+                        <?php foreach ($tecnicos as $t): ?>
+                            <option value="<?= $t['id'] ?>" <?= $rep['tecnico_id'] == $t['id'] ? 'selected' : '' ?>><?= e($t['nombre']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <?php elseif ($can_self_assign): ?>
+                        <button type="button" id="btnAutoAsignar" class="btn btn-primary btn-compact w-100 fw-bold shadow-none">
+                            <i class="bi bi-person-check me-1"></i>Asignarme esta reparación
+                        </button>
+                        <div class="text-muted mt-2" style="font-size: 11px;">Pasarás a ser el técnico a cargo y la reparación cambiará a "En Reparación".</div>
+                    <?php else: ?>
+                        <div class="text-muted" style="font-size: 11px;">Solo administrador puede reasignar.</div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
             <!-- Estado Actual -->
             <div class="dense-card bg-light border-0">
                 <div class="card-body">
@@ -627,7 +662,7 @@ function getHistorialVisual($accion) {
                     <div class="mb-3">
                         <span id="badgeEstado" class="status-pill <?= getBadgeClass($rep['estado']) ?>"><?= e($rep['estado']) ?></span>
                     </div>
-                    
+
                     <div>
                         <label class="form-label text-muted mb-1" style="font-size: 12px;">Modificar Estado</label>
                         <select id="selectEstado" class="form-select form-select-compact w-100" <?= $can_change_estado ? '' : 'disabled' ?>>
@@ -662,41 +697,6 @@ function getHistorialVisual($accion) {
                     </div>
                     <?php if (!$can_change_prioridad): ?>
                     <div class="text-muted mt-2" style="font-size: 11px;">Solo administrador puede cambiar prioridad.</div>
-                    <?php endif; ?>
-                </div>
-            </div>
-
-            <!-- Asignación Técnico -->
-            <div class="dense-card">
-                <div class="card-body">
-                    <div class="text-muted text-uppercase fw-bold mb-2" style="font-size: 11px; letter-spacing: 0.05em;">Técnico Asignado</div>
-                    <div class="d-flex align-items-center gap-2 mb-3">
-                        <?php if ($rep['tecnico_nombre']): ?>
-                            <div class="tech-avatar" style="background-color: <?= e(avatarColor($rep['tecnico_nombre'])) ?>;">
-                                <?= e(mb_strtoupper(mb_substr($rep['tecnico_nombre'], 0, 1, 'UTF-8'), 'UTF-8')) ?>
-                            </div>
-                            <span class="fw-bold text-dark" id="textTecnico" style="font-size: 14px;"><?= e($rep['tecnico_nombre']) ?></span>
-                        <?php else: ?>
-                            <div class="tech-avatar"><i class="bi bi-person-x-fill"></i></div>
-                            <span class="text-muted fst-italic" id="textTecnico" style="font-size: 14px;">Sin asignar</span>
-                        <?php endif; ?>
-                    </div>
-                    
-                    <?php if ($can_reassign_tecnico): ?>
-                    <label class="form-label text-muted mb-1" style="font-size: 12px;">Reasignar</label>
-                    <select id="selectTecnico" class="form-select form-select-compact w-100">
-                        <option value="">-- Quitar Asignación --</option>
-                        <?php foreach ($tecnicos as $t): ?>
-                            <option value="<?= $t['id'] ?>" <?= $rep['tecnico_id'] == $t['id'] ? 'selected' : '' ?>><?= e($t['nombre']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <?php elseif ($can_self_assign): ?>
-                        <button type="button" id="btnAutoAsignar" class="btn btn-primary btn-compact w-100 fw-bold shadow-none">
-                            <i class="bi bi-person-check me-1"></i>Asignarme esta reparación
-                        </button>
-                        <div class="text-muted mt-2" style="font-size: 11px;">Pasarás a ser el técnico a cargo y la reparación cambiará a "En Reparación".</div>
-                    <?php else: ?>
-                        <div class="text-muted" style="font-size: 11px;">Solo administrador puede reasignar.</div>
                     <?php endif; ?>
                 </div>
             </div>
