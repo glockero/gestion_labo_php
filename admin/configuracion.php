@@ -1466,6 +1466,48 @@ require_once __DIR__ . '/../public/includes/header.php';
         </div>
     <?php endforeach; ?>
 
+    <!-- Delete user confirmation modal -->
+    <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+            <form method="POST" class="modal-content border-0 shadow-sm" style="border-radius: 12px;">
+                <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
+                <input type="hidden" name="action" value="delete_usuario">
+                <input type="hidden" name="user_id" id="deleteUserId" value="">
+
+                <div class="modal-header border-bottom-0 pt-4 pb-0 px-4">
+                    <h6 class="modal-title fw-bold" style="font-size: 1rem;">
+                        <i class="bi bi-trash3-fill text-danger me-2"></i>Eliminar usuario
+                    </h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body px-4 py-3" style="font-size: 0.85rem; color: #334155;">
+                    <p class="mb-2">
+                        ¿Eliminar al usuario <strong id="deleteUsername" class="text-danger">—</strong>?
+                    </p>
+                    <ul class="ps-3 mb-2" style="font-size: 0.8rem; color: #64748b;">
+                        <li>El usuario queda marcado como eliminado y no podrá iniciar sesión.</li>
+                        <li>Si está en línea, su sesión activa se cerrará.</li>
+                        <li>El registro se mantiene en BD para preservar historial y auditoría.</li>
+                    </ul>
+                    <div class="alert alert-warning border-0 mb-0" style="font-size: 0.75rem; padding: 0.5rem 0.65rem; background: #fef3c7;">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        Esta acción no se puede deshacer desde la interfaz.
+                    </div>
+                </div>
+
+                <div class="modal-footer border-top-0 px-4 pb-4 pt-2 d-flex gap-2">
+                    <button type="button" class="btn btn-light flex-grow-1 fw-bold text-secondary border"
+                            style="font-size: 0.8rem; padding: 0.5rem;" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger flex-grow-1 fw-bold shadow-none"
+                            style="font-size: 0.8rem; padding: 0.5rem;">
+                        <i class="bi bi-trash me-1"></i>Eliminar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Reset password confirmation modal -->
     <div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
@@ -1532,17 +1574,27 @@ require_once __DIR__ . '/../public/includes/header.php';
         const resetModalEl = document.getElementById('resetPasswordModal');
         document.getElementById('resetModalUsername').textContent = username;
         document.getElementById('resetModalUserId').value = userId;
+        chainOpenModal(resetModalEl);
+    }
 
-        // If another modal is currently open (the edit modal), close it first
-        // and chain the reset modal after its close animation completes.
+    function openDeleteUserModal(userId, username) {
+        const deleteModalEl = document.getElementById('deleteUserModal');
+        document.getElementById('deleteUsername').textContent = username;
+        document.getElementById('deleteUserId').value = userId;
+        chainOpenModal(deleteModalEl);
+    }
+
+    // If another modal is currently open (e.g. the edit modal), close it
+    // first and chain the target modal after its close animation completes.
+    function chainOpenModal(targetEl) {
         const openModal = document.querySelector('.modal.show');
-        if (openModal && openModal !== resetModalEl) {
+        if (openModal && openModal !== targetEl) {
             openModal.addEventListener('hidden.bs.modal', () => {
-                bootstrap.Modal.getOrCreateInstance(resetModalEl).show();
+                bootstrap.Modal.getOrCreateInstance(targetEl).show();
             }, { once: true });
             bootstrap.Modal.getOrCreateInstance(openModal).hide();
         } else {
-            bootstrap.Modal.getOrCreateInstance(resetModalEl).show();
+            bootstrap.Modal.getOrCreateInstance(targetEl).show();
         }
     }
 
@@ -1556,9 +1608,7 @@ require_once __DIR__ . '/../public/includes/header.php';
         if (action === 'reset-password') {
             openResetPasswordModal(userId, username);
         } else if (action === 'delete') {
-            if (confirm(`¿Eliminar al usuario "${username}"? Esta acción no se puede deshacer desde la interfaz.`)) {
-                postUserAction('delete_usuario', userId);
-            }
+            openDeleteUserModal(userId, username);
         }
     });
 

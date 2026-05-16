@@ -68,12 +68,47 @@ function getActionColor($accion) {
     min-height: 240px;
     overflow: auto;
 }
+.historial-table-scroll table {
+    table-layout: fixed;
+    width: 100%;
+}
 .historial-table-scroll thead th {
     position: sticky;
     top: 0;
     z-index: 2;
     background: #f8fafc;
     box-shadow: inset 0 -1px 0 #e2e8f0;
+}
+
+/* Column sizing: keep Fecha/Usuario/Acción/Reparación narrow; Detalle takes the rest */
+.col-h-fecha    { width: 165px; }
+.col-h-usuario  { width: 120px; }
+.col-h-accion   { width: 130px; }
+.col-h-rep      { width: 220px; }
+
+/* Prevent fixed-width cells from overflowing into neighbors */
+.historial-table-scroll td,
+.historial-table-scroll th {
+    overflow: hidden;
+}
+
+/* Detalle: long tokens without spaces should wrap, not blow the layout */
+.col-h-detalle {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+/* Reparación cell: keep equipo+NPU on at most 2 lines with ellipsis */
+.col-h-rep .rep-meta {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.25;
+    margin-top: 2px;
 }
 </style>
 
@@ -99,11 +134,11 @@ function getActionColor($accion) {
         <table class="table table-modern mb-0">
             <thead>
                 <tr>
-                    <th>Fecha</th>
-                    <th>Usuario</th>
-                    <th>Acción</th>
-                    <th>Detalle</th>
-                    <th>Reparación</th>
+                    <th class="col-h-fecha">Fecha</th>
+                    <th class="col-h-usuario">Usuario</th>
+                    <th class="col-h-accion">Acción</th>
+                    <th class="col-h-detalle">Detalle</th>
+                    <th class="col-h-rep">Reparación</th>
                 </tr>
             </thead>
             <tbody>
@@ -112,14 +147,14 @@ function getActionColor($accion) {
                 <?php endif; ?>
                 <?php foreach ($registros as $r): ?>
                 <tr>
-                    <td class="text-nowrap"><?= formatDatetimeArg($r['fecha']) ?></td>
-                    <td><strong><?= e($r['username'] ?? 'Sistema') ?></strong></td>
-                    <td><span class="badge <?= getActionColor($r['accion']) ?>"><?= e($r['accion']) ?></span></td>
-                    <td class="small"><?= e($r['detalle']) ?></td>
-                    <td>
+                    <td class="col-h-fecha text-nowrap"><?= formatDatetimeArg($r['fecha']) ?></td>
+                    <td class="col-h-usuario"><strong><?= e($r['username'] ?? 'Sistema') ?></strong></td>
+                    <td class="col-h-accion"><span class="badge <?= getActionColor($r['accion']) ?>"><?= e($r['accion']) ?></span></td>
+                    <td class="col-h-detalle small"><?= e($r['detalle']) ?></td>
+                    <td class="col-h-rep">
                         <?php if ($r['reparacion_id']): ?>
                             <a href="<?= APP_URL ?>/reparacion_detalle.php?id=<?= $r['reparacion_id'] ?>">#<?= $r['reparacion_id'] ?></a>
-                            <br><small class="text-muted"><?= e($r['equipo']) ?> (<?= e($r['npu']) ?>)</small>
+                            <div class="rep-meta" title="<?= e($r['equipo'] . ' (' . $r['npu'] . ')') ?>"><?= e($r['equipo']) ?> (<?= e($r['npu']) ?>)</div>
                         <?php else: ?>
                             -
                         <?php endif; ?>
