@@ -24,6 +24,7 @@ $user_role = $_SESSION['user_role'] ?? 'tecnico';
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/app.css">
+    <link rel="stylesheet" href="<?= APP_URL ?>/assets/css/admin.css">
 </head>
 <body>
     <!-- Mobile Sidebar Toggler -->

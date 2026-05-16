@@ -1,6 +1,7 @@
 <?php
 // public/includes/sidebar.php
 $current_page = basename($_SERVER['PHP_SELF']);
+$system_pages = ['configuracion.php', 'importar_csv.php', 'historial.php'];
 ?>
 <div class="sidebar" id="sidebar">
     <a class="sidebar-brand" href="<?= APP_URL ?>/index.php">
@@ -28,9 +29,10 @@ $current_page = basename($_SERVER['PHP_SELF']);
     </script>
 
     <div class="sidebar-nav">
+        <div class="sidebar-section-label">OPERACION</div>
         <a href="<?= APP_URL ?>/index.php" class="sidebar-link <?= $current_page == 'index.php' ? 'active' : '' ?>">
             <i class="bi bi-list-ul"></i>
-            <span>SEGUIMIENTO</span>
+            <span>REPARACIONES</span>
         </a>
 
         <a href="<?= APP_URL ?>/reparacion_nueva.php" class="sidebar-link <?= $current_page == 'reparacion_nueva.php' ? 'active' : '' ?>">
@@ -39,24 +41,17 @@ $current_page = basename($_SERVER['PHP_SELF']);
         </a>
 
         <?php if ($user_role === 'admin'): ?>
-        <a href="<?= APP_URL ?>/../admin/configuracion.php" class="sidebar-link <?= $current_page == 'configuracion.php' ? 'active' : '' ?>">
+        <div class="sidebar-section-label">ADMINISTRACION</div>
+        <a href="<?= APP_URL ?>/../admin/configuracion.php" class="sidebar-link <?= in_array($current_page, $system_pages, true) ? 'active' : '' ?>">
             <i class="bi bi-gear"></i>
             <span>SISTEMA</span>
-        </a>
-        <a href="<?= APP_URL ?>/../admin/historial.php" class="sidebar-link <?= $current_page == 'historial.php' ? 'active' : '' ?>">
-            <i class="bi bi-clock-history"></i>
-            <span>HISTORIAL</span>
-        </a>
-        <a href="<?= APP_URL ?>/../admin/importar_csv.php" class="sidebar-link <?= $current_page == 'importar_csv.php' ? 'active' : '' ?>">
-            <i class="bi bi-file-earmark-arrow-up"></i>
-            <span>IMPORTAR CSV</span>
         </a>
         <?php endif; ?>
     </div>
 
     <?php if ($user_role === 'admin'): ?>
-    <div class="sidebar-nav mt-auto" style="padding-bottom: 0;">
-        <div class="text-muted small fw-bold px-3 mb-2" style="font-size: 0.65rem; letter-spacing: 0.05em;">ESTADÍSTICAS</div>
+    <div class="sidebar-nav sidebar-nav-secondary">
+        <div class="sidebar-section-label">ESTADISTICAS</div>
         <a href="<?= APP_URL ?>/dashboard.php" class="sidebar-link <?= $current_page == 'dashboard.php' ? 'active' : '' ?>">
             <i class="bi bi-graph-up-arrow"></i>
             <span>KPI DASHBOARD</span>
@@ -68,7 +63,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
     </div>
     <?php endif; ?>
 
-    <div class="<?= $user_role !== 'admin' ? 'mt-auto' : '' ?> p-3" style="background-color: rgba(0, 0, 0, 0.2); border-top: 1px solid rgba(255,255,255,0.05);">
+    <div class="mt-auto p-3" style="background-color: rgba(0, 0, 0, 0.2); border-top: 1px solid rgba(255,255,255,0.05);">
         <div class="d-flex align-items-center justify-content-between">
             <div class="text-white small text-truncate" style="max-width: 150px;">
                 <i class="bi bi-person-circle me-1 text-info"></i> <strong><?= e($_SESSION['user_username']) ?></strong>

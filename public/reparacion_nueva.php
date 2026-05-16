@@ -113,6 +113,7 @@ require_once __DIR__ . '/includes/header.php';
     .form-shell {
         font-size: 13.5px;
         color: var(--text-main);
+        max-width: 980px;
     }
 
     .page-title {
@@ -138,8 +139,8 @@ require_once __DIR__ . '/includes/header.php';
         border-radius: 8px;
         border: 1px solid var(--border-color);
         box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-        max-width: 960px;
-        margin: 0 auto;
+        max-width: 900px;
+        margin: 0;
         /* No overflow: hidden — Tom Select's dropdown extends below the card */
     }
 
@@ -149,8 +150,8 @@ require_once __DIR__ . '/includes/header.php';
 
     .form-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
-        column-gap: 1.5rem;
+        grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
+        column-gap: 1.25rem;
         row-gap: 0.75rem;
         align-items: start;
     }
@@ -186,7 +187,19 @@ require_once __DIR__ . '/includes/header.php';
 
     .obs-block textarea {
         flex: 1 1 auto;
-        min-height: 140px;
+        min-height: 164px;
+    }
+
+    .new-repair-header {
+        max-width: 900px;
+        margin: 0 0 0.85rem;
+    }
+
+    .new-repair-actions {
+        background: #f8fafc;
+        margin: 0 -1.4rem -1.2rem;
+        padding: 0.85rem 1.4rem;
+        border-top: 1px solid var(--border-color);
     }
 
     @media (max-width: 767.98px) {
@@ -365,9 +378,12 @@ require_once __DIR__ . '/includes/header.php';
     }
 </style>
 
-<div class="form-shell">
-    <div class="d-flex justify-content-between align-items-center mb-3" style="max-width: 900px; margin: 0 auto;">
-        <h2 class="page-title"><i class="bi bi-plus-circle text-primary me-2" style="font-size: 22px;"></i>Nuevo Ingreso</h2>
+<div class="form-shell admin-shell">
+    <div class="new-repair-header d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div>
+            <h2 class="page-title"><i class="bi bi-plus-circle text-primary me-2" style="font-size: 22px;"></i>Nueva Reparacion</h2>
+            <p class="admin-page-subtitle mb-0">Carga rapida de ingreso, equipo, identificadores y observaciones iniciales.</p>
+        </div>
         <a href="index.php" class="btn btn-light btn-compact border text-secondary"><i class="bi bi-arrow-left me-1"></i>Volver</a>
     </div>
 
@@ -463,7 +479,7 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                 </div>
 
-                <div class="d-flex justify-content-end gap-2 mt-1 pt-3 border-top">
+                <div class="new-repair-actions d-flex justify-content-end gap-2">
                     <a href="index.php" class="btn btn-light btn-compact border text-secondary">Cancelar</a>
                     <button type="submit" class="btn btn-primary btn-compact shadow-none"><i class="bi bi-save me-1"></i> Guardar Ingreso</button>
                 </div>

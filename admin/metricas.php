@@ -175,176 +175,9 @@ function avatarColorMetrica($nombre, $palette) {
 }
 ?>
 
-<style>
-.metricas-shell {
-    --border-color: #e5e7eb;
-    --text-main: #1e293b;
-    --text-muted: #64748b;
-    font-size: 13.5px;
-    color: var(--text-main);
-}
 
-.metricas-shell .page-title {
-    font-size: 26px;
-    font-weight: 700;
-    margin: 0;
-    letter-spacing: -0.01em;
-}
 
-.periodo-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.35rem 0.75rem;
-    border-radius: 999px;
-    border: 1px solid var(--border-color);
-    background: #fff;
-    color: var(--text-muted);
-    font-weight: 600;
-    font-size: 12.5px;
-    text-decoration: none;
-    transition: all 0.12s;
-}
-.periodo-chip:hover {
-    border-color: #93c5fd;
-    color: #1d4ed8;
-}
-.periodo-chip.active {
-    background: #2563eb;
-    border-color: #2563eb;
-    color: #fff;
-}
-
-.kpi-card {
-    background: #fff;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 0.85rem 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    position: relative;
-    overflow: hidden;
-}
-.kpi-card .kpi-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-}
-.kpi-card .kpi-value {
-    font-size: 26px;
-    font-weight: 700;
-    line-height: 1;
-}
-.kpi-card .kpi-pct {
-    font-size: 11px;
-    color: var(--text-muted);
-    margin-top: 2px;
-}
-
-.dense-card {
-    background: #fff;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    overflow: hidden;
-}
-.dense-card .card-header {
-    background: #fff;
-    padding: 0.7rem 1rem;
-    border-bottom: 1px solid var(--border-color);
-}
-.dense-card .card-header h6 {
-    font-size: 13px;
-    font-weight: 700;
-    margin: 0;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: var(--text-main);
-}
-
-.metricas-table {
-    width: 100%;
-    margin: 0;
-    font-size: 13px;
-}
-.metricas-table thead th {
-    background: #f8fafc;
-    color: var(--text-muted);
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--border-color);
-    white-space: nowrap;
-}
-.metricas-table tbody td {
-    padding: 0.45rem 0.75rem;
-    border-bottom: 1px solid #f1f5f9;
-    vertical-align: middle;
-}
-.metricas-table tbody tr:last-child td { border-bottom: none; }
-.metricas-table tbody tr:hover td { background: #f8fafc; }
-
-.metricas-table .num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
-.metricas-table .num.muted { color: #94a3b8; font-weight: 500; }
-.metricas-table .name-cell { font-weight: 600; }
-
-.tech-avatar-sm {
-    width: 22px;
-    height: 22px;
-    font-size: 10.5px;
-    font-weight: 700;
-    color: #fff;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 0.4rem;
-    flex-shrink: 0;
-}
-
-.pct-pill {
-    display: inline-block;
-    padding: 2px 7px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 700;
-}
-.pct-good   { background: #dcfce7; color: #166534; }
-.pct-ok     { background: #fef9c3; color: #854d0e; }
-.pct-bad    { background: #fee2e2; color: #991b1b; }
-.pct-empty  { color: #94a3b8; font-style: italic; font-size: 11px; }
-
-.bar-cell { position: relative; padding-right: 0.75rem; min-width: 120px; }
-.bar-cell .bar-bg {
-    position: relative;
-    background: #f1f5f9;
-    border-radius: 999px;
-    height: 6px;
-    overflow: hidden;
-}
-.bar-cell .bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
-    border-radius: 999px;
-}
-
-.table-scroll {
-    max-height: calc(100vh - 380px);
-    min-height: 220px;
-    overflow: auto;
-}
-.table-scroll thead th {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-}
-</style>
-
-<div class="metricas-shell">
+<div class="metricas-shell admin-shell">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h2 class="page-title"><i class="bi bi-bar-chart-line text-primary me-2"></i>Métricas</h2>
         <a href="../public/dashboard.php" class="btn btn-light btn-sm border text-secondary">
@@ -479,20 +312,20 @@ function avatarColorMetrica($nombre, $palette) {
     <div class="row g-3">
         <!-- Por técnico -->
         <div class="col-lg-6">
-            <div class="dense-card">
+            <div class="dense-card por-tecnico-card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h6><i class="bi bi-person-badge me-1"></i>Por Técnico</h6>
                     <span class="text-muted" style="font-size: 11px;"><?= count($porTecnico) ?> técnicos</span>
                 </div>
                 <div class="table-scroll">
-                    <table class="metricas-table">
+                    <table class="metricas-table por-tecnico-table">
                         <thead>
                             <tr>
                                 <th>Técnico</th>
-                                <th class="num">Total</th>
-                                <th class="num">Reparadas</th>
-                                <th class="num">En curso</th>
-                                <th class="num">Sin Rep.</th>
+                                <th class="num num-col">Total</th>
+                                <th class="num num-col">Reparadas</th>
+                                <th class="num num-col">En curso</th>
+                                <th class="num num-col">Sin Rep.</th>
                                 <th class="num">% Éxito</th>
                             </tr>
                         </thead>
@@ -506,21 +339,21 @@ function avatarColorMetrica($nombre, $palette) {
                                 $isSinAsignar = $t['tecnico'] === '(Sin asignar)';
                             ?>
                                 <tr>
-                                    <td class="name-cell d-flex align-items-center">
+                                    <td class="name-cell tecnico-col">
                                         <?php if (!$isSinAsignar): ?>
                                             <span class="tech-avatar-sm" style="background-color: <?= e(avatarColorMetrica($t['tecnico'], $avatarPalette)) ?>;">
                                                 <?= e(mb_strtoupper(mb_substr($t['tecnico'], 0, 1, 'UTF-8'), 'UTF-8')) ?>
                                             </span>
-                                            <?= e($t['tecnico']) ?>
+                                            <span class="tecnico-name" title="<?= e($t['tecnico']) ?>"><?= e($t['tecnico']) ?></span>
                                         <?php else: ?>
                                             <span class="text-muted fst-italic"><?= e($t['tecnico']) ?></span>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="num"><?= number_format($t['total'], 0, ',', '.') ?></td>
-                                    <td class="num"><?= number_format($t['reparadas'], 0, ',', '.') ?></td>
-                                    <td class="num"><?= number_format($t['en_curso'], 0, ',', '.') ?></td>
-                                    <td class="num <?= (int)$t['sin_reparacion'] === 0 ? 'muted' : '' ?>"><?= number_format($t['sin_reparacion'], 0, ',', '.') ?></td>
-                                    <td class="num">
+                                    <td class="num num-col"><?= number_format($t['total'], 0, ',', '.') ?></td>
+                                    <td class="num num-col"><?= number_format($t['reparadas'], 0, ',', '.') ?></td>
+                                    <td class="num num-col"><?= number_format($t['en_curso'], 0, ',', '.') ?></td>
+                                    <td class="num num-col <?= (int)$t['sin_reparacion'] === 0 ? 'muted' : '' ?>"><?= number_format($t['sin_reparacion'], 0, ',', '.') ?></td>
+                                    <td class="num num-col">
                                         <?php if ($pct !== null): ?>
                                             <span class="pct-pill <?= e($pctCls) ?>"><?= number_format($pct, 1, ',', '.') ?>%</span>
                                         <?php else: ?>
@@ -537,20 +370,20 @@ function avatarColorMetrica($nombre, $palette) {
 
         <!-- Por sala -->
         <div class="col-lg-6">
-            <div class="dense-card">
+            <div class="dense-card por-sala-card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h6><i class="bi bi-geo-alt me-1"></i>Por Sala</h6>
                     <span class="text-muted" style="font-size: 11px;"><?= count($porSala) ?> salas</span>
                 </div>
                 <div class="table-scroll">
-                    <table class="metricas-table">
+                    <table class="metricas-table por-sala-table">
                         <thead>
                             <tr>
-                                <th>Sala</th>
-                                <th class="num">Total</th>
-                                <th class="num">Reparadas</th>
-                                <th class="num">En curso</th>
-                                <th class="num">Sin Rep.</th>
+                                <th class="sala-col">Sala</th>
+                                <th class="num num-col">Total</th>
+                                <th class="num num-col">Reparadas</th>
+                                <th class="num num-col">En curso</th>
+                                <th class="num num-col">Sin Rep.</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -561,11 +394,17 @@ function avatarColorMetrica($nombre, $palette) {
                                 $pct = pctExito($s['reparadas'], $s['sin_reparacion']);
                             ?>
                                 <tr>
-                                    <td class="name-cell"><?= e($s['sala']) ?: '<span class="text-muted fst-italic">(Sin sala)</span>' ?></td>
-                                    <td class="num"><?= number_format($s['total'], 0, ',', '.') ?></td>
-                                    <td class="num"><?= number_format($s['reparadas'], 0, ',', '.') ?></td>
-                                    <td class="num"><?= number_format($s['en_curso'], 0, ',', '.') ?></td>
-                                    <td class="num <?= (int)$s['sin_reparacion'] === 0 ? 'muted' : '' ?>"><?= number_format($s['sin_reparacion'], 0, ',', '.') ?></td>
+                                    <td class="name-cell sala-col">
+                                        <?php if ($s['sala']): ?>
+                                            <span class="sala-name" title="<?= e($s['sala']) ?>"><?= e($s['sala']) ?></span>
+                                        <?php else: ?>
+                                            <span class="text-muted fst-italic">(Sin sala)</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="num num-col"><?= number_format($s['total'], 0, ',', '.') ?></td>
+                                    <td class="num num-col"><?= number_format($s['reparadas'], 0, ',', '.') ?></td>
+                                    <td class="num num-col"><?= number_format($s['en_curso'], 0, ',', '.') ?></td>
+                                    <td class="num num-col <?= (int)$s['sin_reparacion'] === 0 ? 'muted' : '' ?>"><?= number_format($s['sin_reparacion'], 0, ',', '.') ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -576,17 +415,17 @@ function avatarColorMetrica($nombre, $palette) {
 
         <!-- Top equipos -->
         <div class="col-12">
-            <div class="dense-card">
+            <div class="dense-card top-equipos-card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h6><i class="bi bi-pc-display me-1"></i>Top 10 Equipos con más ingresos</h6>
                 </div>
-                <table class="metricas-table">
+                <table class="metricas-table top-equipos-table">
                     <thead>
                         <tr>
-                            <th style="width: 36px;">#</th>
-                            <th>Equipo</th>
-                            <th class="num" style="width: 100px;">Ingresos</th>
-                            <th class="bar-cell" style="width: 40%;"></th>
+                            <th class="rank-col">#</th>
+                            <th class="equipo-col">Equipo</th>
+                            <th class="num ingresos-col">Ingresos</th>
+                            <th class="bar-cell"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -600,8 +439,8 @@ function avatarColorMetrica($nombre, $palette) {
                                 $pctBar = round(((int)$eq['total'] / $maxTotal) * 100, 1);
                             ?>
                                 <tr>
-                                    <td class="text-muted"><?= $i + 1 ?></td>
-                                    <td class="name-cell"><?= e($eq['equipo']) ?></td>
+                                    <td class="text-muted rank-col"><?= $i + 1 ?></td>
+                                    <td class="name-cell equipo-col"><span class="equipo-name" title="<?= e($eq['equipo']) ?>"><?= e($eq['equipo']) ?></span></td>
                                     <td class="num"><?= number_format($eq['total'], 0, ',', '.') ?></td>
                                     <td class="bar-cell">
                                         <div class="bar-bg">

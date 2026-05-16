@@ -16,79 +16,71 @@ $kpiReparados = $pdo->query("SELECT COUNT(*) FROM reparaciones WHERE UPPER(estad
 $topEquipos = $pdo->query("SELECT equipo, COUNT(*) as total FROM reparaciones GROUP BY equipo ORDER BY total DESC LIMIT 10")->fetchAll();
 $estadoDistribucion = $pdo->query("SELECT estado, COUNT(*) as total FROM reparaciones GROUP BY estado")->fetchAll();
 $evolucionMensual = $pdo->query("SELECT DATE_FORMAT(fecha, '%Y-%m') as mes, COUNT(*) as total FROM reparaciones GROUP BY mes ORDER BY mes DESC LIMIT 12")->fetchAll();
-// Reverse for chronological order in chart
 $evolucionMensual = array_reverse($evolucionMensual);
-
 ?>
 
-<h2 class="h3 mb-4"><i class="bi bi-graph-up"></i> Dashboard</h2>
+<div class="admin-shell">
+    <div class="admin-page-header">
+        <div>
+            <h2 class="admin-page-title"><i class="bi bi-graph-up text-primary me-1"></i> Dashboard</h2>
+            <p class="admin-page-subtitle">Resumen operativo de ingresos, reparaciones y distribucion del laboratorio.</p>
+        </div>
+        <a href="../admin/metricas.php" class="btn btn-light border text-secondary admin-btn-sm">
+            <i class="bi bi-bar-chart-line me-1"></i>Metricas
+        </a>
+    </div>
 
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card shadow-sm text-center border-0 border-start border-primary border-4">
-            <div class="card-body">
-                <h6 class="text-muted text-uppercase mb-1">Ingresos Hoy</h6>
-                <h2 class="mb-0 text-primary"><?= number_format($kpiHoy) ?></h2>
-            </div>
+    <div class="admin-kpi-grid">
+        <div class="admin-kpi-card" style="--kpi-color: #2563eb;">
+            <div class="admin-kpi-label">Ingresos Hoy</div>
+            <div class="admin-kpi-value"><?= number_format($kpiHoy) ?></div>
+        </div>
+        <div class="admin-kpi-card" style="--kpi-color: #0ea5e9;">
+            <div class="admin-kpi-label">Esta Semana</div>
+            <div class="admin-kpi-value"><?= number_format($kpiSemana) ?></div>
+        </div>
+        <div class="admin-kpi-card" style="--kpi-color: #d97706;">
+            <div class="admin-kpi-label">Este Mes</div>
+            <div class="admin-kpi-value"><?= number_format($kpiMes) ?></div>
+        </div>
+        <div class="admin-kpi-card" style="--kpi-color: #16a34a;">
+            <div class="admin-kpi-label">Reparados Mes</div>
+            <div class="admin-kpi-value"><?= number_format($kpiReparados) ?></div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card shadow-sm text-center border-0 border-start border-info border-4">
-            <div class="card-body">
-                <h6 class="text-muted text-uppercase mb-1">Esta Semana</h6>
-                <h2 class="mb-0 text-info"><?= number_format($kpiSemana) ?></h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card shadow-sm text-center border-0 border-start border-warning border-4">
-            <div class="card-body">
-                <h6 class="text-muted text-uppercase mb-1">Este Mes</h6>
-                <h2 class="mb-0 text-warning"><?= number_format($kpiMes) ?></h2>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card shadow-sm text-center border-0 border-start border-success border-4">
-            <div class="card-body">
-                <h6 class="text-muted text-uppercase mb-1">Reparados (Mes)</h6>
-                <h2 class="mb-0 text-success"><?= number_format($kpiReparados) ?></h2>
-            </div>
-        </div>
-    </div>
-</div>
 
-<div class="row mb-4">
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-header bg-white border-bottom text-muted fw-bold">
-                Evolución de Ingresos (Últimos 12 meses)
+    <div class="row g-3 mb-3">
+        <div class="col-lg-6">
+            <div class="admin-card h-100">
+                <div class="admin-card-header">
+                    <h6><i class="bi bi-graph-up me-1"></i>Evolucion de Ingresos</h6>
+                    <span class="text-muted" style="font-size: 11px;">Ultimos 12 meses</span>
+                </div>
+                <div class="admin-chart-body">
+                    <canvas id="chartEvolucion"></canvas>
+                </div>
             </div>
-            <div class="card-body">
-                <canvas id="chartEvolucion"></canvas>
+        </div>
+        <div class="col-lg-6">
+            <div class="admin-card h-100">
+                <div class="admin-card-header">
+                    <h6><i class="bi bi-pc-display me-1"></i>Top 10 Equipos</h6>
+                    <span class="text-muted" style="font-size: 11px;">Mas ingresos</span>
+                </div>
+                <div class="admin-chart-body">
+                    <canvas id="chartEquipos"></canvas>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-header bg-white border-bottom text-muted fw-bold">
-                Top 10 Equipos que más fallan
-            </div>
-            <div class="card-body">
-                <canvas id="chartEquipos"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
 
-<div class="row">
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-header bg-white border-bottom text-muted fw-bold">
-                Distribución por Estado
-            </div>
-            <div class="card-body d-flex justify-content-center">
-                <div style="width: 70%;">
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="admin-card h-100">
+                <div class="admin-card-header">
+                    <h6><i class="bi bi-tags me-1"></i>Distribucion por Estado</h6>
+                </div>
+                <div class="admin-chart-body d-flex justify-content-center">
                     <canvas id="chartEstados"></canvas>
                 </div>
             </div>
@@ -98,7 +90,6 @@ $evolucionMensual = array_reverse($evolucionMensual);
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Evolucion
     const dataEvo = <?= json_encode($evolucionMensual) ?>;
     new Chart(document.getElementById('chartEvolucion'), {
         type: 'line',
@@ -107,16 +98,17 @@ document.addEventListener('DOMContentLoaded', function() {
             datasets: [{
                 label: 'Ingresos',
                 data: dataEvo.map(d => d.total),
-                borderColor: '#0d6efd',
-                backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                tension: 0.3,
-                fill: true
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                borderWidth: 2,
+                tension: 0.25,
+                fill: true,
+                pointRadius: 3
             }]
         },
         options: { responsive: true, maintainAspectRatio: false }
     });
 
-    // Equipos
     const dataEq = <?= json_encode($topEquipos) ?>;
     new Chart(document.getElementById('chartEquipos'), {
         type: 'bar',
@@ -125,17 +117,17 @@ document.addEventListener('DOMContentLoaded', function() {
             datasets: [{
                 label: 'Cantidad',
                 data: dataEq.map(d => d.total),
-                backgroundColor: '#fd7e14'
+                backgroundColor: '#2563eb',
+                borderRadius: 4
             }]
         },
-        options: { 
-            responsive: true, 
+        options: {
+            responsive: true,
             maintainAspectRatio: false,
             indexAxis: 'y'
         }
     });
 
-    // Estados
     const dataEst = <?= json_encode($estadoDistribucion) ?>;
     new Chart(document.getElementById('chartEstados'), {
         type: 'doughnut',
@@ -143,10 +135,19 @@ document.addEventListener('DOMContentLoaded', function() {
             labels: dataEst.map(d => d.estado),
             datasets: [{
                 data: dataEst.map(d => d.total),
-                backgroundColor: ['#6c757d', '#0d6efd', '#198754', '#dc3545', '#ffc107', '#0dcaf0']
+                backgroundColor: ['#64748b', '#2563eb', '#16a34a', '#dc2626', '#d97706', '#0ea5e9']
             }]
         },
-        options: { responsive: true, maintainAspectRatio: false }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: { boxWidth: 10, boxHeight: 10, font: { size: 11 } }
+                }
+            }
+        }
     });
 });
 </script>
