@@ -285,21 +285,20 @@ require_once __DIR__ . '/../public/includes/header.php';
         $tp = $_SESSION['temp_password_display'];
         unset($_SESSION['temp_password_display']);
     ?>
-    <div class="temp-pass-banner" id="tempPassBanner">
-        <i class="bi bi-key-fill" style="font-size: 1.3rem; color: #b45309;"></i>
+    <div class="temp-pass-banner-premium" id="tempPassBanner">
+        <i class="bi bi-shield-lock-fill text-warning" style="font-size: 1.5rem; margin-left: 6px;"></i>
         <div style="flex: 1 1 220px;">
             <div class="label">PIN temporal para <?= e($tp['username']) ?></div>
-            <div style="font-size: 0.72rem; color: #78350f; margin-top: 2px;">
-                Entregaselo al usuario. Al iniciar sesión, se le pedirá definir una nueva contraseña.
-                No se mostrará otra vez.
+            <div style="font-size: 12px; color: #78350f; margin-top: 2px; font-weight: 500;">
+                Entregáselo al usuario. Al iniciar sesión, se le pedirá definir una nueva contraseña. No se mostrará otra vez.
             </div>
         </div>
-        <code id="tempPassValue" style="font-size: 1.3rem; letter-spacing: 4px;"><?= e($tp['password']) ?></code>
+        <code id="tempPassValue" style="letter-spacing: 4px;"><?= e($tp['password']) ?></code>
         <button type="button" class="btn-copy" onclick="copyTempPass()">
-            <i class="bi bi-clipboard me-1"></i>Copiar
+            <i class="bi bi-clipboard me-1.5"></i>Copiar
         </button>
-        <button type="button" class="btn-copy" onclick="document.getElementById('tempPassBanner').remove()" style="margin-left: auto;" title="Cerrar">
-            <i class="bi bi-x"></i>
+        <button type="button" class="btn-close-banner" onclick="document.getElementById('tempPassBanner').remove()" style="margin-left: auto;" title="Cerrar">
+            <i class="bi bi-x-lg" style="font-size: 14px;"></i>
         </button>
     </div>
     <script>
@@ -308,7 +307,7 @@ require_once __DIR__ . '/../public/includes/header.php';
         navigator.clipboard.writeText(val).then(() => {
             const btn = event.currentTarget;
             const orig = btn.innerHTML;
-            btn.innerHTML = '<i class="bi bi-check2 me-1"></i>Copiado';
+            btn.innerHTML = '<i class="bi bi-check2 me-1.5"></i>Copiado';
             setTimeout(() => btn.innerHTML = orig, 1500);
         });
     }
@@ -318,11 +317,511 @@ require_once __DIR__ . '/../public/includes/header.php';
     <div class="row g-4">
         <div class="col-12">
             <?php if ($tab === 'usuarios'): ?>
+<style>
+    /* Premium variables for User Management */
+    :root {
+        --user-border: #e2e8f0;
+        --user-bg-light: #f8fafc;
+        --user-text-main: #0f172a;
+        --user-text-muted: #64748b;
+        --user-primary: #3b82f6;
+        --user-primary-hover: #2563eb;
+        --user-success: #10b981;
+        --user-success-bg: rgba(16, 185, 129, 0.08);
+        --user-danger: #ef4444;
+        --user-danger-bg: rgba(239, 68, 68, 0.08);
+        --user-warning: #f59e0b;
+        --user-warning-bg: #fffbeb;
+    }
+
+    /* Elevated Cards with Gradient highlights */
+    .user-card-premium {
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid var(--user-border);
+        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.04), 0 8px 10px -6px rgba(15, 23, 42, 0.03);
+        position: relative;
+        overflow: hidden;
+        transition: border-color 0.25s, box-shadow 0.25s;
+    }
+    
+    .user-card-premium:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 12px 30px -8px rgba(15, 23, 42, 0.06);
+    }
+
+    .user-card-premium::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+        z-index: 10;
+    }
+
+    .user-card-premium .card-header {
+        background: #ffffff;
+        border-bottom: 1px solid var(--user-border);
+        padding: 1rem 1.25rem 0.9rem;
+    }
+
+    .user-card-premium .card-header h6 {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--user-text-main);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .user-card-premium .card-body {
+        padding: 1.25rem;
+    }
+
+    /* Filters Bar */
+    .user-filters-premium {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        padding: 0.85rem 1.25rem;
+        border-bottom: 1px solid var(--user-border);
+        background: #f8fafc;
+    }
+
+    .user-filters-premium .filter-search {
+        position: relative;
+        flex: 1 1 240px;
+        max-width: 320px;
+    }
+
+    .user-filters-premium .filter-search input {
+        width: 100%;
+        font-size: 13px;
+        padding: 0.45rem 0.75rem 0.45rem 2.1rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: #ffffff;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 36px;
+    }
+
+    .user-filters-premium .filter-search input:focus {
+        outline: none;
+        border-color: var(--user-primary);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+        background: #ffffff;
+    }
+
+    .user-filters-premium .filter-search .bi-search {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        font-size: 13.5px;
+    }
+
+    .user-filters-premium select {
+        font-size: 13px;
+        padding: 0.45rem 2.1rem 0.45rem 0.75rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: #ffffff;
+        height: 36px;
+        min-width: 150px;
+        transition: all 0.2s;
+    }
+
+    .user-filters-premium select:focus {
+        border-color: var(--user-primary);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+        outline: none;
+    }
+
+    .user-filters-premium .online-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--user-text-muted);
+        cursor: pointer;
+        user-select: none;
+        margin: 0;
+        padding: 0.45rem 0.85rem;
+        border-radius: 8px;
+        border: 1px dashed var(--user-border);
+        background: #ffffff;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 36px;
+    }
+
+    .user-filters-premium .online-toggle:hover {
+        border-color: var(--user-success);
+        color: #065f46;
+        background: var(--user-success-bg);
+    }
+
+    .user-filters-premium .online-toggle.is-active {
+        border-color: var(--user-success);
+        background: var(--user-success);
+        color: #ffffff;
+        border-style: solid;
+        box-shadow: 0 4px 10px rgba(16, 185, 129, 0.15);
+    }
+
+    .user-filters-premium .online-toggle.is-active .bi-circle-fill {
+        color: #ffffff !important;
+        animation: pulse-online-active 1.6s ease-out infinite;
+    }
+
+    @keyframes pulse-online-active {
+        0% { transform: scale(1); opacity: 0.8; }
+        50% { transform: scale(1.3); opacity: 1; }
+        100% { transform: scale(1); opacity: 0.8; }
+    }
+
+    .user-filters-premium .online-toggle input {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .user-filters-premium .filter-clear {
+        font-size: 12px;
+        color: var(--user-primary);
+        background: none;
+        border: none;
+        padding: 0.45rem 0.6rem;
+        cursor: pointer;
+        font-weight: 600;
+        border-radius: 6px;
+        transition: background 0.15s;
+    }
+
+    .user-filters-premium .filter-clear:hover {
+        background: #eff6ff;
+    }
+
+    /* Premium Avatar with Status Overlay */
+    .avatar-wrapper {
+        position: relative;
+        display: inline-block;
+    }
+
+    .user-avatar-premium {
+        width: 32px;
+        height: 32px;
+        font-size: 13px;
+        border-radius: 8px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s;
+    }
+
+    /* Color gradients for avatars based on role */
+    .avatar-admin {
+        background: linear-gradient(135deg, #fee2e2, #fecaca) !important;
+        color: #991b1b !important;
+        border: 1px solid rgba(239, 68, 68, 0.1) !important;
+    }
+
+    .avatar-tecnico {
+        background: linear-gradient(135deg, #e0f2fe, #bae6fd) !important;
+        color: #0369a1 !important;
+        border: 1px solid rgba(59, 130, 246, 0.1) !important;
+    }
+
+    .status-badge-overlay {
+        position: absolute;
+        bottom: -2px;
+        right: -2px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        border: 2px solid #ffffff;
+        box-sizing: content-box;
+    }
+
+    .status-badge-overlay.online {
+        background-color: #10b981;
+        box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.15);
+    }
+    
+    .status-badge-overlay.active {
+        background-color: #64748b;
+    }
+
+    .status-badge-overlay.inactive {
+        background-color: #ef4444;
+    }
+
+    /* Pulsing online status dot */
+    .status-badge-overlay.online::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background-color: #10b981;
+        animation: avatar-pulse 1.8s infinite ease-in-out;
+        z-index: -1;
+    }
+
+    @keyframes avatar-pulse {
+        0% { transform: scale(1); opacity: 0.7; }
+        100% { transform: scale(2.4); opacity: 0; }
+    }
+
+    /* Elegant Role Badges */
+    .role-badge-premium {
+        font-size: 11.5px;
+        font-weight: 600;
+        padding: 0.25rem 0.55rem;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        letter-spacing: 0.01em;
+    }
+
+    .role-badge-admin {
+        background-color: rgba(239, 68, 68, 0.06);
+        color: #dc2626;
+        border: 1px solid rgba(239, 68, 68, 0.15);
+    }
+
+    .role-badge-tecnico {
+        background-color: rgba(59, 130, 246, 0.06);
+        color: #2563eb;
+        border: 1px solid rgba(59, 130, 246, 0.15);
+    }
+
+    /* Action Buttons in Table */
+    .btn-action-circle {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+        border: 1px solid var(--user-border);
+        color: var(--user-text-muted);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        padding: 0;
+    }
+
+    .btn-action-circle:hover {
+        background: #f1f5f9;
+        color: var(--user-text-main);
+        transform: translateY(-1px);
+    }
+
+    .btn-action-circle.btn-edit-user:hover {
+        border-color: var(--user-primary);
+        color: var(--user-primary);
+        background: #eff6ff;
+        box-shadow: 0 4px 10px rgba(59, 130, 246, 0.1);
+    }
+
+    .btn-action-circle.btn-logout-user:hover {
+        border-color: var(--user-warning);
+        color: var(--user-warning);
+        background: #fffbeb;
+        box-shadow: 0 4px 10px rgba(245, 158, 11, 0.1);
+    }
+
+    /* Custom Forms within configuracion */
+    .settings-shell .dense-form .form-label {
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--user-text-main);
+        margin-bottom: 0.35rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .settings-shell .dense-form .form-control,
+    .settings-shell .dense-form .form-select {
+        height: 38px;
+        font-size: 13.5px;
+        border-radius: 8px;
+        border: 1px solid #cbd5e1;
+        padding: 0.45rem 0.75rem;
+        background-color: var(--user-bg-light);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        color: var(--user-text-main);
+    }
+
+    .settings-shell .dense-form .form-control:focus,
+    .settings-shell .dense-form .form-select:focus {
+        background-color: #ffffff;
+        border-color: var(--user-primary);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+        outline: none;
+    }
+
+    /* Switch Customization */
+    .form-switch-premium {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: #f8fafc;
+        border: 1px solid var(--user-border);
+        border-radius: 8px;
+        padding: 0.6rem 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .form-switch-premium:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+    }
+
+    .form-switch-premium .form-check-input {
+        margin: 0;
+        cursor: pointer;
+        width: 1.75em;
+        height: 1em;
+    }
+
+    /* Temp PIN Banner Premium */
+    .temp-pass-banner-premium {
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        border: 1px solid rgba(245, 158, 11, 0.4);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        box-shadow: 0 10px 20px -5px rgba(245, 158, 11, 0.05);
+        position: relative;
+    }
+
+    .temp-pass-banner-premium::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 4px;
+        background: #f59e0b;
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+    }
+
+    .temp-pass-banner-premium .label {
+        font-size: 13px;
+        color: #78350f;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+
+    .temp-pass-banner-premium code {
+        font-size: 1.45rem;
+        font-family: monospace;
+        background: #ffffff;
+        border: 1px solid rgba(245, 158, 11, 0.25);
+        border-radius: 8px;
+        padding: 0.35rem 0.9rem;
+        color: #b45309;
+        font-weight: 700;
+        letter-spacing: 4px;
+        user-select: all;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .temp-pass-banner-premium .btn-copy {
+        font-size: 12.5px;
+        padding: 0.45rem 1rem;
+        border-radius: 8px;
+        border: 1px solid #f59e0b;
+        background: #ffffff;
+        color: #b45309;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 2px 4px rgba(245, 158, 11, 0.05);
+    }
+
+    .temp-pass-banner-premium .btn-copy:hover {
+        background: #fef3c7;
+        transform: translateY(-1px);
+    }
+
+    .temp-pass-banner-premium .btn-close-banner {
+        background: none;
+        border: none;
+        color: #b45309;
+        font-size: 20px;
+        cursor: pointer;
+        padding: 4px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        transition: background 0.2s;
+    }
+
+    .temp-pass-banner-premium .btn-close-banner:hover {
+        background: rgba(180, 83, 9, 0.08);
+    }
+
+    /* Danger zone */
+    .settings-shell .danger-zone {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 10px;
+        padding: 0.9rem 1rem;
+        margin-top: 0.5rem;
+    }
+    
+    .settings-shell .danger-zone h6 {
+        font-size: 11px;
+        color: #991b1b;
+        margin: 0 0 0.6rem 0;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .settings-shell .danger-zone .btn {
+        font-size: 12px;
+        font-weight: 600;
+        padding: 0.45rem 0.8rem;
+        border-radius: 8px;
+    }
+</style>
                 <div class="row g-3">
                     <div class="col-lg-3">
-                        <div class="dense-card">
+                        <div class="user-card-premium">
                             <div class="card-header">
-                                <h6>Crear Usuario</h6>
+                                <h6><i class="bi bi-person-plus text-primary fs-5 me-1"></i>Crear Usuario</h6>
                             </div>
                             <div class="card-body">
                                 <form method="POST" class="dense-form d-grid gap-2" autocomplete="off">
@@ -330,22 +829,22 @@ require_once __DIR__ . '/../public/includes/header.php';
                                     <input type="hidden" name="action" value="add_usuario">
 
                                     <div>
-                                        <label class="form-label">Nombre de Usuario</label>
+                                        <label class="form-label"><i class="bi bi-person text-secondary me-1"></i>Nombre de Usuario</label>
                                         <input type="text" name="new_username" class="form-control" required placeholder="Usuario">
                                     </div>
                                     <div>
-                                        <label class="form-label">Contraseña</label>
+                                        <label class="form-label"><i class="bi bi-lock text-secondary me-1"></i>Contraseña</label>
                                         <input type="password" name="new_password" class="form-control" required minlength="<?= MIN_PASSWORD_LENGTH ?>" placeholder="Mín. <?= MIN_PASSWORD_LENGTH ?> caracteres">
                                     </div>
                                     <div>
-                                        <label class="form-label">Rol del Sistema</label>
+                                        <label class="form-label"><i class="bi bi-shield-check text-secondary me-1"></i>Rol del Sistema</label>
                                         <select name="rol" class="form-select user-role-select" data-target="new-user-tecnico">
                                             <option value="tecnico">Técnico</option>
                                             <option value="admin">Administrador</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label class="form-label">Técnico Vinculado</label>
+                                        <label class="form-label"><i class="bi bi-person-badge text-secondary me-1"></i>Técnico Vinculado</label>
                                         <select name="tecnico_id" id="new-user-tecnico" class="form-select">
                                             <option value="">Ninguno / No aplica</option>
                                             <?php foreach ($tecnicos as $t): ?>
@@ -353,25 +852,25 @@ require_once __DIR__ . '/../public/includes/header.php';
                                             <?php endforeach; ?>
                                         </select>
                                     </div>
-                                    <div class="form-check form-switch mt-1">
+                                    <div class="form-switch-premium mt-1">
                                         <input type="checkbox" class="form-check-input" id="activo_nuevo" name="activo" checked>
-                                        <label class="form-check-label" style="font-size: 0.75rem;" for="activo_nuevo">Habilitar Acceso</label>
+                                        <label class="form-check-label fw-semibold text-dark m-0 cursor-pointer" style="font-size: 0.8rem;" for="activo_nuevo">Habilitar Acceso</label>
                                     </div>
-                                    <button type="submit" class="btn btn-primary w-100 mt-2 fw-bold">Crear Usuario</button>
+                                    <button type="submit" class="btn btn-primary w-100 mt-2 fw-bold" style="border-radius: 8px; height: 38px;">Crear Usuario</button>
                                 </form>
                             </div>
                         </div>
                     </div>
 
                     <div class="col-lg-9">
-                        <div class="dense-card">
+                        <div class="user-card-premium">
                             <div class="card-header d-flex justify-content-between align-items-center">
-                                <h6>Gestión de Usuarios</h6>
-                                <span class="text-muted" style="font-size: 0.75rem;" id="userCount">
+                                <h6><i class="bi bi-people-fill text-primary fs-5 me-1"></i>Gestión de Usuarios</h6>
+                                <span class="badge bg-light text-secondary border fw-bold" style="font-size: 0.75rem;" id="userCount">
                                     <?= count($usuarios) ?> <?= count($usuarios) === 1 ? 'usuario' : 'usuarios' ?>
                                 </span>
                             </div>
-                            <div class="user-filters">
+                            <div class="user-filters-premium">
                                 <div class="filter-search">
                                     <i class="bi bi-search"></i>
                                     <input type="search" id="userSearch" placeholder="Buscar por usuario o técnico..." autocomplete="off">
@@ -381,7 +880,7 @@ require_once __DIR__ . '/../public/includes/header.php';
                                     <option value="admin">Solo Administradores</option>
                                     <option value="tecnico">Solo Técnicos</option>
                                 </select>
-                                <label class="online-toggle" title="Mostrar solo usuarios con sesión activa">
+                                <label class="online-toggle" id="userOnlineFilterLabel" title="Mostrar solo usuarios con sesión activa">
                                     <input type="checkbox" id="userOnlineFilter">
                                     <span><i class="bi bi-circle-fill text-success" style="font-size: 0.5rem;"></i> Solo en línea</span>
                                 </label>
@@ -413,60 +912,72 @@ require_once __DIR__ . '/../public/includes/header.php';
                                                 data-rol="<?= e($u['rol']) ?>"
                                                 data-online="<?= $isOnline ? '1' : '0' ?>">
                                                 <td>
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <div class="user-avatar d-flex align-items-center justify-content-center bg-light text-primary fw-bold border">
-                                                            <?= e(mb_strtoupper(mb_substr($u['username'], 0, 1, 'UTF-8'), 'UTF-8')) ?>
+                                                    <div class="d-flex align-items-center gap-2.5">
+                                                        <div class="avatar-wrapper">
+                                                            <div class="user-avatar-premium avatar-<?= $u['rol'] ?>">
+                                                                <?= e(mb_strtoupper(mb_substr($u['username'], 0, 1, 'UTF-8'), 'UTF-8')) ?>
+                                                            </div>
+                                                            <span class="status-badge-overlay <?= !$u['activo'] ? 'inactive' : ($isOnline ? 'online' : 'active') ?>" 
+                                                                  title="<?= !$u['activo'] ? 'Deshabilitado' : ($isOnline ? 'En línea' : 'Habilitado') ?>"></span>
                                                         </div>
-                                                        <span class="fw-bold"><?= e($u['username']) ?></span>
-                                                        <?php if ($isSelf): ?>
-                                                            <span class="text-muted" style="font-size: 0.7rem;">(vos)</span>
-                                                        <?php endif; ?>
+                                                        <div class="d-flex flex-column">
+                                                            <span class="fw-bold text-dark" style="font-size: 13.5px;"><?= e($u['username']) ?></span>
+                                                            <?php if ($isSelf): ?>
+                                                                <span class="text-primary fw-semibold" style="font-size: 11px; margin-top: -1px;">Tú mismo</span>
+                                                            <?php endif; ?>
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td>
                                                     <?php if ($u['rol'] === 'admin'): ?>
-                                                        <span class="badge-pill badge-admin">Administrador</span>
+                                                        <span class="role-badge-premium role-badge-admin"><i class="bi bi-shield-lock me-0.5"></i>Administrador</span>
                                                     <?php else: ?>
-                                                        <span class="badge-pill badge-tecnico">Técnico</span>
+                                                        <span class="role-badge-premium role-badge-tecnico"><i class="bi bi-person-gear me-0.5"></i>Técnico</span>
                                                     <?php endif; ?>
                                                 </td>
-                                                <td class="text-muted small"><?= e($u['tecnico_nombre'] ?? '-') ?></td>
+                                                <td class="text-secondary small fw-medium"><?= e($u['tecnico_nombre'] ?? '-') ?></td>
                                                 <td class="text-center">
                                                     <?php if (!$u['activo']): ?>
-                                                        <span class="status-dot inactive" title="Deshabilitado"></span>
+                                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-10 fw-semibold" style="font-size: 11.5px; padding: 0.25rem 0.5rem; border-radius: 6px;">Suspendido</span>
                                                     <?php elseif ($isOnline): ?>
-                                                        <span class="status-dot online" title="En línea"></span>
+                                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-10 fw-semibold" style="font-size: 11.5px; padding: 0.25rem 0.5rem; border-radius: 6px;">Activo</span>
                                                     <?php else: ?>
-                                                        <span class="status-dot active" title="Habilitado"></span>
+                                                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-10 fw-semibold" style="font-size: 11.5px; padding: 0.25rem 0.5rem; border-radius: 6px;">Habilitado</span>
                                                     <?php endif; ?>
                                                 </td>
-                                                <td class="text-muted small">
+                                                <td class="text-secondary small fw-medium">
                                                     <?php if ($isOnline): ?>
-                                                        <span class="text-success fw-bold" style="font-size: 0.75rem;">● En línea</span>
+                                                        <span class="text-success fw-bold d-flex align-items-center gap-1" style="font-size: 12.5px;">
+                                                            <span class="d-inline-block bg-success rounded-circle animate-pulse" style="width: 6px; height: 6px;"></span> En línea
+                                                        </span>
                                                         <?php if (!empty($u['last_ip'])): ?>
-                                                            <div style="font-size: 0.7rem;"><?= e($u['last_ip']) ?></div>
+                                                            <div class="text-muted text-secondary" style="font-size: 10.5px; margin-top: 1px;"><i class="bi bi-hdd me-0.5"></i> <?= e($u['last_ip']) ?></div>
                                                         <?php endif; ?>
                                                     <?php else: ?>
-                                                        <?= $u['last_login'] ? date('d/m/y H:i', strtotime($u['last_login'])) : '<span class="text-muted">Nunca</span>' ?>
+                                                        <div class="d-flex align-items-center gap-1 text-muted">
+                                                            <i class="bi bi-clock me-0.5"></i>
+                                                            <?= $u['last_login'] ? date('d/m/y H:i', strtotime($u['last_login'])) : '<span class="text-muted fst-italic">Nunca</span>' ?>
+                                                        </div>
                                                     <?php endif; ?>
                                                 </td>
                                                 <td class="text-muted small">
+                                                    <i class="bi bi-calendar3 me-0.5"></i>
                                                     <?= $u['created_at'] ? date('d/m/y', strtotime($u['created_at'])) : '-' ?>
                                                 </td>
                                                 <td class="text-end px-3">
-                                                    <div class="d-inline-flex gap-1">
+                                                    <div class="d-inline-flex gap-1.5">
                                                         <?php if ($isOnline && !$isSelf): ?>
                                                             <form method="POST" class="d-inline" onsubmit="return confirm('¿Forzar cierre de sesión de <?= e($u['username']) ?>?');">
                                                                 <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                                                                 <input type="hidden" name="action" value="force_logout">
                                                                 <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
-                                                                <button type="submit" class="btn btn-sm btn-light border btn-icon" title="Forzar cierre de sesión">
-                                                                    <i class="bi bi-box-arrow-right text-warning" style="font-size: 0.75rem;"></i>
+                                                                <button type="submit" class="btn-action-circle btn-logout-user" title="Forzar cierre de sesión">
+                                                                    <i class="bi bi-box-arrow-right text-warning"></i>
                                                                 </button>
                                                             </form>
                                                         <?php endif; ?>
-                                                        <button type="button" class="btn btn-sm btn-light border btn-icon" data-bs-toggle="modal" data-bs-target="#editUser<?= $u['id'] ?>" title="Editar">
-                                                            <i class="bi bi-pencil" style="font-size: 0.75rem;"></i>
+                                                        <button type="button" class="btn-action-circle btn-edit-user" data-bs-toggle="modal" data-bs-target="#editUser<?= $u['id'] ?>" title="Editar">
+                                                            <i class="bi bi-pencil-fill"></i>
                                                         </button>
                                                     </div>
                                                 </td>
@@ -1134,7 +1645,7 @@ require_once __DIR__ . '/../public/includes/header.php';
     <?php foreach($usuarios as $u): ?>
         <div class="modal fade" id="editUser<?= $u['id'] ?>" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
-                <form method="POST" class="modal-content border-0 shadow-sm" style="border-radius: 12px;" autocomplete="off">
+                <form method="POST" class="modal-content border-0 shadow-sm" style="border-radius: 16px;" autocomplete="off">
                     <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                     <input type="hidden" name="action" value="update_usuario">
                     <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
@@ -1143,71 +1654,65 @@ require_once __DIR__ . '/../public/includes/header.php';
                     <?php endif; ?>
 
                     <div class="modal-header border-bottom-0 pt-4 pb-0 px-4">
-                        <h6 class="modal-title fw-bold text-dark" style="font-size: 1rem;"><i class="bi bi-pencil-square text-primary me-2"></i>Editar <?= e($u['username']) ?></h6>
+                        <h6 class="modal-title fw-bold text-dark" style="font-size: 1.05rem; display: flex; align-items: center; gap: 8px;"><i class="bi bi-person-gear text-primary" style="font-size: 1.2rem;"></i>Editar <?= e($u['username']) ?></h6>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="font-size: 0.75rem;"></button>
                     </div>
                     <div class="modal-body px-4 py-3 d-grid gap-3">
                         <div class="dense-form">
-                            <label class="form-label" style="font-size: 0.75rem;">Nombre de Usuario</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0 text-muted" style="padding: 0.4rem 0.6rem;"><i class="bi bi-person"></i></span>
-                                <input type="text" name="username" class="form-control border-start-0" value="<?= e($u['username']) ?>" required autocomplete="off" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
-                            </div>
+                            <label class="form-label" style="font-size: 0.75rem;"><i class="bi bi-person text-secondary me-0.5"></i>Nombre de Usuario</label>
+                            <input type="text" name="username" class="form-control" value="<?= e($u['username']) ?>" required autocomplete="off" style="font-size: 0.85rem; padding: 0.45rem 0.75rem; border-radius: 8px;">
                         </div>
                         <div class="dense-form">
-                            <label class="form-label" style="font-size: 0.75rem;">Nueva Contraseña</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0 text-muted" style="padding: 0.4rem 0.6rem;"><i class="bi bi-lock"></i></span>
-                                <input type="password" name="password" class="form-control border-start-0" placeholder="Dejar en blanco para mantener" minlength="<?= MIN_PASSWORD_LENGTH ?>" autocomplete="new-password" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
-                            </div>
+                            <label class="form-label" style="font-size: 0.75rem;"><i class="bi bi-lock text-secondary me-0.5"></i>Nueva Contraseña</label>
+                            <input type="password" name="password" class="form-control" placeholder="Dejar en blanco para mantener" minlength="<?= MIN_PASSWORD_LENGTH ?>" autocomplete="new-password" style="font-size: 0.85rem; padding: 0.45rem 0.75rem; border-radius: 8px;">
                         </div>
                         <div class="dense-form">
-                            <label class="form-label" style="font-size: 0.75rem;">Rol del Sistema</label>
-                            <select name="rol" class="form-select user-role-select" data-target="tecnico_<?= $u['id'] ?>" style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
+                            <label class="form-label" style="font-size: 0.75rem;"><i class="bi bi-shield-check text-secondary me-0.5"></i>Rol del Sistema</label>
+                            <select name="rol" class="form-select user-role-select" data-target="tecnico_<?= $u['id'] ?>" style="font-size: 0.85rem; padding: 0.45rem 0.75rem; border-radius: 8px; height: 38px;">
                                 <option value="admin" <?= $u['rol'] === 'admin' ? 'selected' : '' ?>>Administrador</option>
                                 <option value="tecnico" <?= $u['rol'] === 'tecnico' ? 'selected' : '' ?>>Técnico</option>
                             </select>
                         </div>
                         <div class="dense-form">
-                            <label class="form-label" style="font-size: 0.75rem;">Vincular con Técnico</label>
-                            <select name="tecnico_id" id="tecnico_<?= $u['id'] ?>" class="form-select tom-select-user" <?= $u['rol'] === 'admin' ? 'disabled' : '' ?> style="font-size: 0.85rem; padding: 0.4rem 0.6rem;">
+                            <label class="form-label" style="font-size: 0.75rem;"><i class="bi bi-person-badge text-secondary me-0.5"></i>Vincular con Técnico</label>
+                            <select name="tecnico_id" id="tecnico_<?= $u['id'] ?>" class="form-select" <?= $u['rol'] === 'admin' ? 'disabled' : '' ?> style="font-size: 0.85rem; padding: 0.45rem 0.75rem; border-radius: 8px; height: 38px;">
                                 <option value="">Ninguno / No aplica</option>
                                 <?php foreach ($tecnicos as $t): ?>
                                     <option value="<?= e($t['id']) ?>" <?= (string)($u['tecnico_id'] ?? '') === (string)$t['id'] ? 'selected' : '' ?>><?= e($t['nombre']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="form-check form-switch p-2 bg-light rounded mt-1 border">
+                        <div class="form-switch-premium p-2.5 rounded border mt-1">
                             <input type="checkbox" class="form-check-input ms-0 me-2" name="activo" id="activo_<?= $u['id'] ?>" <?= $u['activo'] ? 'checked' : '' ?> <?= $u['id'] == $_SESSION['user_id'] ? 'disabled' : '' ?>>
-                            <label class="form-check-label fw-semibold text-dark" for="activo_<?= $u['id'] ?>" style="font-size: 0.8rem;">Usuario habilitado</label>
+                            <label class="form-check-label fw-semibold text-dark m-0 cursor-pointer" for="activo_<?= $u['id'] ?>" style="font-size: 0.82rem;">Usuario habilitado para el sistema</label>
                         </div>
                         <?php if ($u['id'] == $_SESSION['user_id']): ?>
-                        <div class="alert alert-info border-0 bg-info bg-opacity-10 text-info-emphasis d-flex align-items-center gap-2 mb-0" style="font-size: 0.75rem; padding: 0.5rem;">
+                        <div class="alert alert-info border-0 bg-info bg-opacity-10 text-info-emphasis d-flex align-items-center gap-2 mb-0" style="font-size: 0.75rem; padding: 0.5rem; border-radius: 8px;">
                             <i class="bi bi-info-circle-fill"></i> No podés desactivar tu propia cuenta.
                         </div>
                         <?php else: ?>
                         <div class="danger-zone">
                             <h6><i class="bi bi-shield-exclamation me-1"></i>Acciones avanzadas</h6>
                             <div class="d-flex gap-2 flex-wrap">
-                                <button type="button" class="btn btn-outline-warning"
+                                <button type="button" class="btn btn-outline-warning btn-sm flex-grow-1"
                                         data-user-action="reset-password"
                                         data-user-id="<?= e($u['id']) ?>"
                                         data-username="<?= e($u['username']) ?>">
-                                    <i class="bi bi-key me-1"></i>Resetear contraseña
+                                    <i class="bi bi-key-fill me-1"></i>Resetear contraseña
                                 </button>
-                                <button type="button" class="btn btn-outline-danger ms-auto"
+                                <button type="button" class="btn btn-outline-danger btn-sm flex-grow-1"
                                         data-user-action="delete"
                                         data-user-id="<?= e($u['id']) ?>"
                                         data-username="<?= e($u['username']) ?>">
-                                    <i class="bi bi-trash me-1"></i>Eliminar
+                                    <i class="bi bi-trash-fill me-1"></i>Eliminar cuenta
                                 </button>
                             </div>
                         </div>
                         <?php endif; ?>
                     </div>
                     <div class="modal-footer border-top-0 px-4 pb-4 pt-0 d-flex gap-2">
-                        <button type="button" class="btn btn-light flex-grow-1 fw-bold text-secondary border" style="font-size: 0.8rem; padding: 0.5rem;" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary flex-grow-1 fw-bold shadow-none" style="font-size: 0.8rem; padding: 0.5rem;">Actualizar Datos</button>
+                        <button type="button" class="btn btn-light flex-grow-1 fw-bold text-secondary border" style="font-size: 0.8rem; padding: 0.55rem; border-radius: 8px;" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary flex-grow-1 fw-bold shadow-none" style="font-size: 0.8rem; padding: 0.55rem; border-radius: 8px;">Actualizar Datos</button>
                     </div>
                 </form>
             </div>
@@ -1393,6 +1898,15 @@ require_once __DIR__ . '/../public/includes/header.php';
             const role = roleSelect.value;
             const onlyOnline = onlineCheck.checked;
             const hasFilter = q !== '' || role !== '' || onlyOnline;
+
+            const onlineLabel = document.getElementById('userOnlineFilterLabel');
+            if (onlineLabel) {
+                if (onlyOnline) {
+                    onlineLabel.classList.add('is-active');
+                } else {
+                    onlineLabel.classList.remove('is-active');
+                }
+            }
 
             let visible = 0;
             rows.forEach((row) => {
