@@ -80,106 +80,234 @@ require_once __DIR__ . '/includes/header.php';
 
 <style>
     :root {
-        --border-color: #e5e7eb;
-        --bg-light: #f8fafc;
-        --text-main: #1e293b;
-        --text-muted: #64748b;
-        --primary-blue: #2563eb;
+        --edit-bg: #f3f4f6;
+        --edit-surface: #ffffff;
+        --edit-surface-soft: #f8fafc;
+        --edit-border: #d6dbe3;
+        --edit-border-strong: #b8c2cf;
+        --edit-text: #1f2937;
+        --edit-muted: #6b7280;
+        --edit-heading: #111827;
+        --edit-accent: #334155;
+        --edit-warning: #92400e;
+        --edit-shadow: 0 18px 40px -30px rgba(15, 23, 42, 0.45);
+    }
+
+    body {
+        background:
+            radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 34%),
+            linear-gradient(180deg, #f8fafc 0%, var(--edit-bg) 100%) !important;
     }
 
     .form-shell {
         font-size: 13.5px;
-        color: var(--text-main);
+        color: var(--edit-text);
+        max-width: 980px;
+        margin: 0 auto;
+    }
+
+    .edit-header {
+        margin-bottom: 1.5rem;
+        padding: 1.5rem;
+        border: 1px solid rgba(214, 219, 227, 0.95);
+        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94));
+        box-shadow: var(--edit-shadow);
+    }
+
+    .edit-kicker {
+        margin-bottom: 0.45rem;
+        color: var(--edit-muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
     }
 
     .page-title {
-        font-size: 26px;
+        font-size: 28px;
         font-weight: 700;
         margin: 0;
-        letter-spacing: -0.01em;
-        color: var(--text-main);
+        color: var(--edit-heading);
+    }
+
+    .edit-subtitle {
+        margin: 0.45rem 0 0;
+        color: var(--edit-muted);
+        max-width: 720px;
+        line-height: 1.55;
+    }
+
+    .edit-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+        margin-top: 1rem;
+    }
+
+    .edit-meta-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        min-height: 34px;
+        padding: 0.45rem 0.8rem;
+        border: 1px solid var(--edit-border);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--edit-text);
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .edit-meta-chip i {
+        color: var(--edit-accent);
     }
 
     .btn-compact {
-        height: 36px;
-        padding: 0 1rem;
+        height: 38px;
+        padding: 0 0.95rem;
         font-size: 13px;
         display: inline-flex;
         align-items: center;
-        border-radius: 6px;
+        border-radius: 8px;
         font-weight: 600;
+        border-width: 1px;
+    }
+
+    .btn-toolbar-neutral {
+        background: transparent;
+        border-color: var(--edit-border-strong);
+        color: var(--edit-text);
+    }
+
+    .btn-toolbar-neutral:hover {
+        background: var(--edit-surface-soft);
+        border-color: var(--edit-accent);
+        color: var(--edit-heading);
+    }
+
+    .btn-toolbar-primary {
+        background: var(--edit-heading);
+        border-color: var(--edit-heading);
+        color: #fff;
+    }
+
+    .btn-toolbar-primary:hover {
+        background: #1f2937;
+        border-color: #1f2937;
+        color: #fff;
     }
 
     .dense-card {
-        background: #fff;
+        background: rgba(255, 255, 255, 0.97);
         border-radius: 8px;
-        border: 1px solid var(--border-color);
-        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-        max-width: 900px;
-        margin: 0 auto;
+        border: 1px solid var(--edit-border);
+        box-shadow: var(--edit-shadow);
         overflow: hidden;
     }
 
+    .dense-card .card-header {
+        background: linear-gradient(180deg, rgba(249, 250, 251, 0.96), rgba(243, 244, 246, 0.9));
+        border-bottom: 1px solid var(--edit-border);
+        padding: 0.9rem 1.4rem;
+    }
+
+    .dense-card .card-header h6 {
+        margin: 0;
+        color: var(--edit-heading);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+    }
+
+    .dense-card .card-header h6 i {
+        color: var(--edit-accent);
+        margin-right: 0.35rem;
+    }
+
     .dense-card .card-body {
-        padding: 1.25rem 1.5rem;
+        padding: 1.35rem 1.5rem 1.5rem;
+    }
+
+    .form-section {
+        padding: 1rem;
+        border: 1px solid var(--edit-border);
+        border-radius: 8px;
+        background: linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
+    }
+
+    .section-caption {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin-bottom: 1rem;
+        color: var(--edit-heading);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+    }
+
+    .section-caption i {
+        color: var(--edit-accent);
     }
 
     .form-label-compact {
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--text-muted);
-        margin-bottom: 0.2rem;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--edit-muted);
+        margin-bottom: 0.35rem;
         text-transform: uppercase;
-        letter-spacing: 0.02em;
+        letter-spacing: 0.1em;
     }
 
     .form-control-compact, .form-select-compact {
-        height: 40px;
-        font-size: 14px;
-        border-radius: 6px;
-        border: 1px solid #d1d5db;
-        padding: 0.4rem 0.75rem;
-        background-color: var(--bg-light);
-        transition: all 0.15s;
+        min-height: 42px;
+        font-size: 13.5px;
+        border-radius: 8px;
+        border: 1px solid var(--edit-border-strong);
+        padding: 0.55rem 0.75rem;
+        background-color: #ffffff;
+        color: var(--edit-text);
+        transition: all 0.15s ease;
     }
 
     .form-control-compact:focus, .form-select-compact:focus {
-        background-color: #fff;
-        border-color: var(--primary-blue);
-        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+        border-color: var(--edit-accent);
+        box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.12);
     }
 
     .form-text-compact {
         font-size: 12px;
-        color: #9ca3af;
-        margin-top: 0.15rem;
+        color: var(--edit-muted);
+        margin-top: 0.25rem;
     }
 
     .top-form-row {
         display: flex;
         align-items: flex-start;
-        gap: 24px;
+        gap: 1rem;
         flex-wrap: wrap;
-        margin-bottom: 18px;
     }
 
     .date-field-block {
-        width: 260px;
-        flex: 0 0 260px;
+        width: 280px;
+        flex: 0 0 280px;
     }
 
     .date-field-block small {
         display: block;
-        margin-top: 4px;
+        margin-top: 6px;
         font-size: 12px;
-        color: #9ca3af;
+        color: var(--edit-muted);
     }
 
     .switch-block {
         display: flex;
         align-items: center;
-        height: 40px;
-        margin-top: 22px;
+        min-height: 42px;
+        margin-top: 23px;
     }
 
     .switch-inline {
@@ -193,34 +321,48 @@ require_once __DIR__ . '/includes/header.php';
     }
 
     .urgent-pill {
-        padding: 0 14px;
-        border: 1px solid #fecaca;
-        border-radius: 6px;
-        background: #fef2f2;
-        color: #b91c1c;
+        padding: 0 0.9rem;
+        border: 1px solid #e7c98a;
+        border-radius: 8px;
+        background: #fffbeb;
+        color: var(--edit-warning);
         font-weight: 700;
-        height: 40px;
+        height: 42px;
         transition: all 0.2s ease;
     }
 
     .urgent-pill.is-active {
-        background: #dc2626;
-        border-color: #dc2626;
-        color: #ffffff;
-        box-shadow: 0 4px 10px rgba(220, 38, 38, 0.18);
+        background: #991b1b;
+        border-color: #991b1b;
+        color: #fff;
+        box-shadow: 0 10px 24px -18px rgba(153, 27, 27, 0.8);
     }
 
     .alert-compact {
-        padding: 0.75rem 1rem;
+        padding: 0.85rem 1rem;
         font-size: 13px;
-        border-radius: 6px;
+        border-radius: 8px;
         display: flex;
         align-items: center;
-        gap: 8px;
-        margin-top: 1rem;
+        gap: 0.7rem;
+        margin-top: 0.25rem;
+        line-height: 1.45;
+    }
+
+    .form-actions {
+        border-top: 1px solid var(--edit-border);
+        padding-top: 1rem;
     }
 
     @media (max-width: 767.98px) {
+        .edit-header {
+            padding: 1.2rem;
+        }
+
+        .page-title {
+            font-size: 24px;
+        }
+
         .date-field-block {
             width: 100%;
             flex: 0 0 100%;
@@ -232,102 +374,123 @@ require_once __DIR__ . '/includes/header.php';
 
     /* Override TomSelect */
     .ts-control {
-        height: 40px !important;
-        border-radius: 6px !important;
-        border-color: #d1d5db !important;
-        background-color: var(--bg-light) !important;
-        font-size: 14px !important;
-        padding-top: 0.5rem !important;
-        padding-bottom: 0.5rem !important;
+        min-height: 42px !important;
+        border-radius: 8px !important;
+        border-color: var(--edit-border-strong) !important;
+        background-color: #ffffff !important;
+        font-size: 13.5px !important;
+        padding: 0.55rem 0.75rem !important;
     }
     .ts-control.focus {
-        background-color: #fff !important;
-        border-color: var(--primary-blue) !important;
-        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1) !important;
+        border-color: var(--edit-accent) !important;
+        box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.12) !important;
     }
     .ts-control > input {
-        font-size: 14px !important;
+        font-size: 13.5px !important;
+    }
+    .ts-dropdown {
+        border-color: var(--edit-border) !important;
+        border-radius: 8px !important;
+        box-shadow: 0 16px 36px -28px rgba(15, 23, 42, 0.65) !important;
     }
 </style>
 
 <div class="form-shell">
-    <div class="d-flex justify-content-between align-items-center mb-3" style="max-width: 900px; margin: 0 auto;">
-        <h2 class="page-title"><i class="bi bi-pencil-square text-primary me-2" style="font-size: 22px;"></i>Editar Reparación #<?= $rep['id'] ?></h2>
-        <a href="reparacion_detalle.php?id=<?= $rep['id'] ?>" class="btn btn-light btn-compact border text-secondary"><i class="bi bi-x-lg me-1"></i>Cancelar</a>
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center edit-header gap-3">
+        <div>
+            <h2 class="page-title">Editar Reparación</h2>
+            <div class="edit-meta">
+                <span class="edit-meta-chip"><i class="bi bi-calendar3"></i><?= formatDatetimeArg($rep['fecha']) ?></span>
+                <span class="edit-meta-chip"><i class="bi bi-door-open"></i><?= e($rep['sala']) ?></span>
+                <span class="edit-meta-chip"><i class="bi bi-pc-display-horizontal"></i><?= e($rep['equipo']) ?></span>
+            </div>
+        </div>
+        <a href="reparacion_detalle.php?id=<?= $rep['id'] ?>" class="btn btn-compact btn-toolbar-neutral"><i class="bi bi-x-lg me-1"></i>Cancelar</a>
     </div>
 
     <div class="dense-card">
+        <div class="card-header">
+            <h6><i class="bi bi-pencil-square"></i>Datos editables</h6>
+        </div>
         <div class="card-body">
             <form method="POST" action="reparacion_editar.php?id=<?= $rep['id'] ?>" class="d-flex flex-column gap-3">
                 <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                 
-                <div class="top-form-row">
-                    <div class="date-field-block">
-                        <label class="form-label-compact">Fecha y Hora</label>
-                        <input type="text" name="fecha" id="fecha_input" class="form-control form-control-compact bg-light" 
-                               value="<?= date('Y-m-d H:i', strtotime($rep['fecha'])) ?>" readonly>
+                <div class="form-section">
+                    <div class="section-caption"><i class="bi bi-calendar2-check"></i>Fecha y prioridad</div>
+                    <div class="top-form-row">
+                        <div class="date-field-block">
+                            <label class="form-label-compact">Fecha y Hora</label>
+                            <input type="text" name="fecha" id="fecha_input" class="form-control form-control-compact bg-light"
+                                   value="<?= date('Y-m-d H:i', strtotime($rep['fecha'])) ?>" readonly>
+                            <?php if ($user_role === 'admin'): ?>
+                            <small>Formato: YYYY-MM-DD HH:MM</small>
+                            <?php endif; ?>
+                        </div>
+
                         <?php if ($user_role === 'admin'): ?>
-                        <small>Formato: YYYY-MM-DD HH:MM</small>
+                        <div class="switch-block">
+                            <label class="switch-inline form-switch">
+                                <input class="form-check-input m-0" type="checkbox" role="switch" id="unlock_fecha">
+                                <span class="text-muted" style="font-size: 13px; padding-top: 2px;">Editar fecha manualmente</span>
+                            </label>
+                        </div>
                         <?php endif; ?>
-                    </div>
-                    
-                    <?php if ($user_role === 'admin'): ?>
-                    <div class="switch-block">
-                        <label class="switch-inline form-switch">
-                            <input class="form-check-input m-0" type="checkbox" role="switch" id="unlock_fecha">
-                            <span class="text-muted" style="font-size: 13px; padding-top: 2px;">Editar fecha manualmente</span>
-                        </label>
-                    </div>
-                    <?php endif; ?>
-                    
-                    <div class="switch-block">
-                        <label class="switch-inline form-switch urgent-pill <?= $rep['urgente'] === 'SI' ? 'is-active' : '' ?>">
-                            <input class="form-check-input m-0" type="checkbox" role="switch" id="urgente" name="urgente" value="SI" <?= $rep['urgente'] === 'SI' ? 'checked' : '' ?>>
-                            <span style="padding-top: 2px;">URGENTE</span>
-                        </label>
+
+                        <div class="switch-block">
+                            <label class="switch-inline form-switch urgent-pill <?= $rep['urgente'] === 'SI' ? 'is-active' : '' ?>">
+                                <input class="form-check-input m-0" type="checkbox" role="switch" id="urgente" name="urgente" value="SI" <?= $rep['urgente'] === 'SI' ? 'checked' : '' ?>>
+                                <span style="padding-top: 2px;">URGENTE</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
 
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label-compact">Sala <span class="text-danger">*</span></label>
-                        <select name="sala" class="form-select tom-select" data-allow-new required>
-                            <option value="">Seleccione o escriba...</option>
-                            <?php foreach ($salas as $s): ?>
-                                <option value="<?= e($s['nombre']) ?>" <?= $rep['sala'] === $s['nombre'] ? 'selected' : '' ?>><?= e($s['nombre']) ?></option>
-                            <?php endforeach; ?>
-                            <?php if(!in_array($rep['sala'], array_column($salas, 'nombre'))): ?>
-                                 <option value="<?= e($rep['sala']) ?>" selected><?= e($rep['sala']) ?></option>
-                            <?php endif; ?>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label-compact">Familia</label>
-                        <select name="familia" class="form-select tom-select" data-allow-new>
-                            <option value="">Seleccione o escriba...</option>
-                            <?php foreach ($familias as $f): ?>
-                                <option value="<?= e($f['nombre']) ?>" <?= $rep['familia'] === $f['nombre'] ? 'selected' : '' ?>><?= e($f['nombre']) ?></option>
-                            <?php endforeach; ?>
-                            <?php if($rep['familia'] && !in_array($rep['familia'], array_column($familias, 'nombre'))): ?>
-                                 <option value="<?= e($rep['familia']) ?>" selected><?= e($rep['familia']) ?></option>
-                            <?php endif; ?>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label-compact">Equipo <span class="text-danger">*</span></label>
-                        <select name="equipo" class="form-select tom-select" data-allow-new required>
-                            <option value="">Seleccione o escriba...</option>
-                            <?php foreach ($equipos as $eq): ?>
-                                <option value="<?= e($eq['nombre']) ?>" <?= $rep['equipo'] === $eq['nombre'] ? 'selected' : '' ?>><?= e($eq['nombre']) ?></option>
-                            <?php endforeach; ?>
-                            <?php if(!in_array($rep['equipo'], array_column($equipos, 'nombre'))): ?>
-                                 <option value="<?= e($rep['equipo']) ?>" selected><?= e($rep['equipo']) ?></option>
-                            <?php endif; ?>
-                        </select>
+                <div class="form-section">
+                    <div class="section-caption"><i class="bi bi-grid-3x3-gap"></i>Clasificación del equipo</div>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label-compact">Sala <span class="text-danger">*</span></label>
+                            <select name="sala" class="form-select tom-select" data-allow-new required>
+                                <option value="">Seleccione o escriba...</option>
+                                <?php foreach ($salas as $s): ?>
+                                    <option value="<?= e($s['nombre']) ?>" <?= $rep['sala'] === $s['nombre'] ? 'selected' : '' ?>><?= e($s['nombre']) ?></option>
+                                <?php endforeach; ?>
+                                <?php if(!in_array($rep['sala'], array_column($salas, 'nombre'))): ?>
+                                     <option value="<?= e($rep['sala']) ?>" selected><?= e($rep['sala']) ?></option>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label-compact">Familia</label>
+                            <select name="familia" class="form-select tom-select" data-allow-new>
+                                <option value="">Seleccione o escriba...</option>
+                                <?php foreach ($familias as $f): ?>
+                                    <option value="<?= e($f['nombre']) ?>" <?= $rep['familia'] === $f['nombre'] ? 'selected' : '' ?>><?= e($f['nombre']) ?></option>
+                                <?php endforeach; ?>
+                                <?php if($rep['familia'] && !in_array($rep['familia'], array_column($familias, 'nombre'))): ?>
+                                     <option value="<?= e($rep['familia']) ?>" selected><?= e($rep['familia']) ?></option>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label-compact">Equipo <span class="text-danger">*</span></label>
+                            <select name="equipo" class="form-select tom-select" data-allow-new required>
+                                <option value="">Seleccione o escriba...</option>
+                                <?php foreach ($equipos as $eq): ?>
+                                    <option value="<?= e($eq['nombre']) ?>" <?= $rep['equipo'] === $eq['nombre'] ? 'selected' : '' ?>><?= e($eq['nombre']) ?></option>
+                                <?php endforeach; ?>
+                                <?php if(!in_array($rep['equipo'], array_column($equipos, 'nombre'))): ?>
+                                     <option value="<?= e($rep['equipo']) ?>" selected><?= e($rep['equipo']) ?></option>
+                                <?php endif; ?>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
-                <div class="row g-3">
+                <div class="form-section">
+                    <div class="section-caption"><i class="bi bi-upc-scan"></i>Identificación y asignación</div>
+                    <div class="row g-3">
                     <div class="col-md-4">
                         <label class="form-label-compact">NPU / Patrimonio</label>
                         <input type="text" name="npu" class="form-control form-control-compact" value="<?= e($rep['npu']) ?>">
@@ -347,13 +510,15 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                 </div>
 
+                </div>
+
                 <div class="alert alert-warning alert-compact mb-0 bg-warning bg-opacity-10 text-warning-emphasis border-warning border-opacity-25">
                     <i class="bi bi-info-circle-fill"></i>
                     <div>Nota: Modifique las observaciones y el estado desde la vista de <a href="reparacion_detalle.php?id=<?= $rep['id'] ?>" class="fw-bold text-decoration-none">Detalle</a> para mantener el historial.</div>
                 </div>
 
-                <div class="d-flex justify-content-end gap-2 mt-2 pt-3 border-top">
-                    <button type="submit" class="btn btn-primary btn-compact shadow-none"><i class="bi bi-save me-1"></i> Guardar Cambios</button>
+                <div class="d-flex justify-content-end gap-2 form-actions">
+                    <button type="submit" class="btn btn-compact btn-toolbar-primary shadow-none"><i class="bi bi-save me-1"></i>Guardar cambios</button>
                 </div>
             </form>
         </div>

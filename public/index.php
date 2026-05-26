@@ -129,6 +129,24 @@ if (count($npu_list) > 0) {
         background-color: #edf2f7 !important; /* Deeper cool slate background for beautiful card frames */
     }
 
+    @media (min-width: 992px) {
+        body {
+            overflow-y: hidden;
+        }
+
+        .main-content {
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .main-content > .fade-in {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 0;
+        }
+    }
+
     /* Page Title */
     .page-title {
         font-size: 28px;
@@ -511,6 +529,23 @@ if (count($npu_list) > 0) {
        more row becomes visible without making the page scroll. */
     .table-scroll.no-chips {
         max-height: calc(100vh - 310px);
+    }
+
+    @media (min-width: 992px) {
+        .table-container {
+            display: flex;
+            flex: 1 1 auto;
+            flex-direction: column;
+            min-height: 0;
+            margin-bottom: 0 !important;
+        }
+
+        .table-scroll,
+        .table-scroll.no-chips {
+            flex: 1 1 auto;
+            max-height: none;
+            min-height: 0;
+        }
     }
 
     .custom-table {

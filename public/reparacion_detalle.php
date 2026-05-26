@@ -112,168 +112,274 @@ function getHistorialVisual($accion) {
 
 <style>
     :root {
-        --border-color: #cbd5e1; /* Higher contrast border */
-        --bg-light: #f1f5f9; /* Slightly deeper slate light background */
-        --text-main: #0f172a; /* Deeper black-slate text for pure readability */
-        --text-muted: #475569; /* Much higher contrast muted label text */
-        --primary-blue: #1d4ed8; /* Pristine deeper blue */
+        --detail-bg: #f3f4f6;
+        --detail-surface: #ffffff;
+        --detail-surface-soft: #f8fafc;
+        --detail-border: #d6dbe3;
+        --detail-border-strong: #b8c2cf;
+        --detail-text: #1f2937;
+        --detail-muted: #6b7280;
+        --detail-heading: #111827;
+        --detail-accent: #334155;
+        --detail-shadow: 0 18px 40px -30px rgba(15, 23, 42, 0.45);
     }
 
     body {
-        background-color: #edf2f7 !important; /* Deeper cool slate background for beautiful card frames */
+        background:
+            radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 34%),
+            linear-gradient(180deg, #f8fafc 0%, var(--detail-bg) 100%) !important;
     }
 
     .detail-shell {
         font-size: 13.5px;
-        color: var(--text-main);
+        color: var(--detail-text);
     }
 
     .detail-header {
-        margin-bottom: 1.25rem;
+        margin-bottom: 1.5rem;
+        padding: 1.5rem;
+        border: 1px solid rgba(214, 219, 227, 0.95);
+        border-radius: 18px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.94));
+        box-shadow: var(--detail-shadow);
+    }
+
+    .detail-kicker {
+        margin-bottom: 0.45rem;
+        color: var(--detail-muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
     }
 
     .detail-title {
-        font-size: 26px;
-        font-weight: 800;
-        color: var(--text-main);
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--detail-heading);
         margin: 0;
-        letter-spacing: -0.02em;
+        letter-spacing: -0.03em;
+    }
+
+    .detail-subtitle {
+        margin: 0.45rem 0 0;
+        color: var(--detail-muted);
+        max-width: 720px;
+        line-height: 1.55;
+    }
+
+    .detail-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+        margin-top: 1rem;
+    }
+
+    .detail-meta-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        min-height: 34px;
+        padding: 0.45rem 0.8rem;
+        border: 1px solid var(--detail-border);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--detail-text);
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .detail-meta-chip i {
+        color: var(--detail-accent);
+    }
+
+    .detail-layout {
+        align-items: start;
     }
 
     .dense-card {
-        background: #ffffff;
-        border-radius: 12px; /* Smoother curves */
-        border: 1px solid var(--border-color); /* Higher contrast border */
-        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.015), 
-                    0 4px 12px -2px rgba(148, 163, 184, 0.05);
-        margin-bottom: 1.25rem;
+        background: rgba(255, 255, 255, 0.97);
+        border-radius: 18px;
+        border: 1px solid var(--detail-border);
+        box-shadow: var(--detail-shadow);
+        margin-bottom: 1rem;
         overflow: hidden;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
     .dense-card .card-header {
-        background-color: #e8eff9 !important; /* Soft premium cool-blue silver tint for light, elegant high contrast */
-        padding: 0.65rem 1rem;
-        border-bottom: 1px solid #cbd5e1 !important;
-        border-left: 4px solid var(--primary-blue) !important; /* Grounding high-contrast vertical blue anchor line */
+        background: linear-gradient(180deg, rgba(249, 250, 251, 0.96), rgba(243, 244, 246, 0.9)) !important;
+        padding: 0.9rem 1.2rem;
+        border-bottom: 1px solid var(--detail-border) !important;
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
 
     .dense-card .card-header h6 {
-        font-size: 13.5px;
-        font-weight: 800;
+        font-size: 12px;
+        font-weight: 700;
         margin: 0;
-        color: #1e3a8a !important; /* Deep corporate navy blue for clear contrast on light blue background */
+        color: var(--detail-heading) !important;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.12em;
     }
 
     .dense-card .card-header h6 i {
-        color: var(--primary-blue) !important; /* Vibrant primary blue icon accent */
-        font-size: 14.5px;
-        margin-right: 0.25rem;
+        color: var(--detail-accent) !important;
+        font-size: 13px;
+        margin-right: 0.35rem;
     }
 
     .dense-card .card-body {
-        padding: 1.1rem;
+        padding: 1.2rem;
     }
 
-    /* Grid for data */
     .data-grid {
         display: grid;
-        grid-template-columns: 140px 1fr;
-        gap: 0.4rem 1rem;
+        grid-template-columns: 150px 1fr;
+        gap: 0.7rem 1rem;
         align-items: baseline;
     }
-    
+
     @media (max-width: 575.98px) {
         .data-grid {
             grid-template-columns: 1fr;
-            gap: 0.1rem;
+            gap: 0.15rem;
         }
+
         .data-label {
             margin-top: 0.5rem;
         }
     }
 
     .data-label {
-        color: var(--text-muted);
-        font-size: 11.5px;
+        color: var(--detail-muted);
+        font-size: 11px;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.12em;
     }
 
     .data-value {
         font-size: 14px;
         font-weight: 600;
-        color: #0f172a;
+        color: var(--detail-heading);
+        line-height: 1.5;
+    }
+
+    .data-chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        padding: 0.3rem 0.7rem;
+        border-radius: 999px;
+        border: 1px solid var(--detail-border);
+        background: var(--detail-surface-soft);
+        color: var(--detail-text);
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .section-divider {
+        margin: 1.35rem 0;
+        border-color: var(--detail-border);
+        opacity: 1;
+    }
+
+    .section-caption {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin-bottom: 0.95rem;
+        color: var(--detail-heading);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+    }
+
+    .section-caption i {
+        color: var(--detail-accent);
     }
 
     .btn-compact {
-        height: 34px;
-        padding: 0 0.8rem;
+        height: 38px;
+        padding: 0 0.95rem;
         font-size: 13px;
         display: inline-flex;
         align-items: center;
-        border-radius: 6px;
+        border-radius: 10px;
         font-weight: 600;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        transition: all 0.15s ease;
+        border-width: 1px;
+    }
+
+    .btn-toolbar-neutral {
+        background: transparent;
+        border-color: var(--detail-border-strong);
+        color: var(--detail-text);
+    }
+
+    .btn-toolbar-neutral:hover {
+        background: var(--detail-surface-soft);
+        border-color: var(--detail-accent);
+        color: var(--detail-heading);
+    }
+
+    .btn-toolbar-primary {
+        background: var(--detail-heading);
+        border-color: var(--detail-heading);
+        color: #fff;
+    }
+
+    .btn-toolbar-primary:hover {
+        background: #1f2937;
+        border-color: #1f2937;
+        color: #fff;
     }
 
     .form-control-compact, .form-select-compact {
-        height: 38px;
+        min-height: 42px;
         font-size: 13px;
-        border-radius: 6px;
-        border: 1px solid #94a3b8; /* Higher contrast border */
-        padding: 0.4rem 0.6rem;
+        border-radius: 10px;
+        border: 1px solid var(--detail-border-strong);
+        padding: 0.55rem 0.75rem;
         background-color: #ffffff;
-        color: var(--text-main);
+        color: var(--detail-text);
         transition: all 0.15s ease;
     }
 
     .form-control-compact:focus, .form-select-compact:focus {
-        border-color: var(--primary-blue);
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        border-color: var(--detail-accent);
+        box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.12);
     }
 
-    .list-group-compact .list-group-item {
-        padding: 0.6rem 1rem;
-        font-size: 13px;
-        border-color: var(--border-color);
-    }
-
-    /* Status Pills */
     .status-pill {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        padding: 0.4rem 0.8rem;
-        font-size: 13px;
-        font-weight: 750;
-        border-radius: 6px;
-        letter-spacing: 0.03em;
+        padding: 0.55rem 0.9rem;
+        font-size: 12px;
+        font-weight: 700;
+        border-radius: 999px;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
-        width: 100%;
         text-align: center;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
     }
-    
-    .status-success { background-color: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
-    .status-warning { background-color: #fefce8; color: #b45309; border: 1px solid #fde047; }
-    .status-danger { background-color: #fff5f5; color: #c53030; border: 1px solid #fca5a5; }
-    .status-info { background-color: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
-    .status-secondary { background-color: #f8fafc; color: #475569; border: 1px solid #cbd5e1; }
-    .status-primary { background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-    .status-dark { background-color: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; }
+
+    .status-success { background-color: #ecfdf3; color: #166534; border: 1px solid #b7e4c7; }
+    .status-warning { background-color: #fff8e6; color: #92400e; border: 1px solid #f3d19c; }
+    .status-danger { background-color: #fef2f2; color: #991b1b; border: 1px solid #efc4c4; }
+    .status-info { background-color: #eff6ff; color: #1d4ed8; border: 1px solid #c6d6f7; }
+    .status-secondary { background-color: #f5f6f7; color: #4b5563; border: 1px solid #d6dbe3; }
+    .status-primary { background-color: #eef2f7; color: #334155; border: 1px solid #cfd8e3; }
+    .status-dark { background-color: #e5e7eb; color: #111827; border: 1px solid #d1d5db; }
 
     .tech-avatar {
-        width: 24px;
-        height: 24px;
-        font-size: 11px;
+        width: 38px;
+        height: 38px;
+        font-size: 14px;
         background-color: #cbd5e1;
         color: #fff;
         border-radius: 50%;
@@ -281,44 +387,120 @@ function getHistorialVisual($accion) {
         align-items: center;
         justify-content: center;
         font-weight: 700;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2);
     }
 
-    /* Vertical timeline for "Historial de Movimientos" */
+    .aside-stack {
+        position: sticky;
+        top: 1rem;
+    }
+
+    .aside-value {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--detail-heading);
+    }
+
+    .aside-note,
+    .helper-note {
+        margin-top: 0.75rem;
+        color: var(--detail-muted);
+        font-size: 11.5px;
+        line-height: 1.5;
+    }
+
+    .observaciones-box {
+        padding: 1rem 1.05rem;
+        border: 1px solid var(--detail-border);
+        border-radius: 14px;
+        background: linear-gradient(180deg, #fafafa 0%, #f7f8fa 100%);
+        max-height: 260px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        font-size: 13.5px;
+        line-height: 1.65;
+    }
+
+    .comment-composer {
+        display: flex;
+        gap: 0.75rem;
+        align-items: flex-end;
+    }
+
+    .summary-panel {
+        padding: 1rem 1.05rem;
+        border: 1px solid var(--detail-border);
+        border-radius: 14px;
+        background: linear-gradient(180deg, rgba(249,250,251,0.98), rgba(243,244,246,0.94));
+    }
+
+    .summary-panel.is-warning {
+        border-color: #e7c98a;
+        background: linear-gradient(180deg, rgba(255,251,235,0.98), rgba(254,243,199,0.72));
+    }
+
+    .summary-label {
+        color: var(--detail-muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 0.5rem;
+    }
+
+    .summary-value {
+        color: var(--detail-heading);
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1.3;
+    }
+
+    .summary-text {
+        color: var(--detail-text);
+        font-size: 12.5px;
+        line-height: 1.55;
+        margin-top: 0.55rem;
+    }
+
     .timeline {
         position: relative;
-        padding: 0.75rem 1rem 0.75rem 2.4rem;
+        padding: 1rem 1.25rem 1.1rem 3rem;
     }
+
     .timeline::before {
         content: '';
         position: absolute;
-        left: 1.55rem;
-        top: 1rem;
-        bottom: 1rem;
+        left: 1.9rem;
+        top: 1.2rem;
+        bottom: 1.2rem;
         width: 2px;
-        background: #cbd5e1; /* Higher contrast line */
+        background: linear-gradient(180deg, #d1d5db 0%, #e5e7eb 100%);
     }
+
     .timeline-item {
         position: relative;
-        padding-bottom: 0.85rem;
+        padding-bottom: 1rem;
     }
+
     .timeline-item:last-child { padding-bottom: 0; }
 
     .timeline-dot {
         position: absolute;
-        left: -1.55rem;
-        top: 0;
-        width: 22px;
-        height: 22px;
+        left: -2rem;
+        top: 0.15rem;
+        width: 24px;
+        height: 24px;
         border-radius: 50%;
         background: #fff;
-        border: 2px solid #94a3b8;
+        border: 2px solid var(--detail-border-strong);
         display: inline-flex;
         align-items: center;
         justify-content: center;
         font-size: 11px;
-        color: #475569;
+        color: var(--detail-muted);
         z-index: 1;
     }
+
     .timeline-dot.dot-blue   { background: #2563eb; border-color: #1d4ed8; color: #fff; }
     .timeline-dot.dot-violet { background: #7c3aed; border-color: #6d28d9; color: #fff; }
     .timeline-dot.dot-amber  { background: #f59e0b; border-color: #d97706; color: #fff; }
@@ -330,43 +512,46 @@ function getHistorialVisual($accion) {
 
     .timeline-content {
         font-size: 13px;
-        line-height: 1.35;
+        line-height: 1.45;
     }
+
     .timeline-content .accion {
         font-weight: 700;
-        color: #0f172a;
+        color: var(--detail-heading);
         font-size: 13px;
     }
+
     .timeline-content .fecha {
         font-size: 11px;
-        color: var(--text-muted);
+        color: var(--detail-muted);
         white-space: nowrap;
     }
+
     .timeline-content .meta {
         font-size: 11.5px;
-        color: var(--text-muted);
-        margin-top: 1px;
+        color: var(--detail-muted);
+        margin-top: 0.15rem;
     }
+
     .timeline-content .detalle {
-        margin-top: 0.4rem;
-        padding: 0.45rem 0.65rem;
-        background: #f1f5f9; /* Higher contrast background */
-        border-left: 3px solid #64748b; /* Thick accent border */
-        border-radius: 0 6px 6px 0;
+        margin-top: 0.55rem;
+        padding: 0.7rem 0.85rem;
+        background: var(--detail-surface-soft);
+        border: 1px solid var(--detail-border);
+        border-radius: 12px;
         font-size: 12px;
-        color: #1e293b;
+        color: #374151;
         font-style: italic;
-        box-shadow: inset 0 1px 2px rgba(15,23,42,0.02);
     }
+
     .timeline-empty {
-        padding: 1.25rem;
+        padding: 1.4rem;
         text-align: center;
-        color: var(--text-muted);
+        color: var(--detail-muted);
         font-style: italic;
         font-size: 13px;
     }
 
-    /* Page-wide loading overlay used during fetch round-trips */
     .page-loading-overlay {
         position: fixed;
         inset: 0;
@@ -377,88 +562,144 @@ function getHistorialVisual($accion) {
         justify-content: center;
         backdrop-filter: blur(2px);
     }
+
     .page-loading-overlay.is-active { display: flex; }
+
     .page-loading-overlay .spinner-border {
         width: 2.5rem;
         height: 2.5rem;
-        color: var(--primary-blue);
+        color: var(--detail-accent);
     }
 
-    /* Autosize textareas grow with content but cap at ~10 rows */
     textarea.autosize {
         resize: none;
-        min-height: 38px;
+        min-height: 42px;
         max-height: 220px;
         overflow-y: auto;
     }
 
-    /* Collapsible "Historial del NPU" card */
     .npu-history-card .card-header {
         cursor: pointer;
         user-select: none;
         transition: background 0.12s;
     }
-    .npu-history-card .card-header:hover { background: #e2e8f0; }
+
+    .npu-history-card .card-header:hover { background: #eef2f7 !important; }
+
     .npu-history-card .card-header .toggle-icon {
         transition: transform 0.2s ease;
-        color: var(--text-muted);
+        color: var(--detail-muted);
         font-size: 14px;
     }
+
     .npu-history-card .card-header[aria-expanded="true"] .toggle-icon {
         transform: rotate(180deg);
     }
+
     .npu-history-card .npu-history-count {
         font-size: 11px;
         font-weight: 700;
-        background: #fef3c7;
-        color: #b45309;
-        border: 1px solid #fcd34d;
+        background: #f3f4f6;
+        color: #4b5563;
+        border: 1px solid var(--detail-border);
         border-radius: 999px;
-        padding: 1px 7px;
-        margin-left: 0.4rem;
+        padding: 0.18rem 0.5rem;
+        margin-left: 0.5rem;
     }
+
     .npu-history-card table {
         font-size: 12.5px;
         margin: 0;
     }
+
     .npu-history-card table thead th {
-        background: #334155 !important; /* Dark header for history table */
-        color: #f8fafc !important;
+        background: #eef2f7 !important;
+        color: #374151 !important;
         font-size: 10.5px;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
-        padding: 0.5rem 0.6rem;
-        border-bottom: 2px solid #1e293b !important;
+        letter-spacing: 0.1em;
+        padding: 0.7rem 0.75rem;
+        border-bottom: 1px solid var(--detail-border) !important;
     }
+
     .npu-history-card table tbody td {
-        padding: 0.35rem 0.6rem;
-        border-bottom: 1px solid #cbd5e1;
+        padding: 0.55rem 0.75rem;
+        border-bottom: 1px solid var(--detail-border);
         vertical-align: middle;
     }
+
     .npu-history-card table tbody tr:last-child td { border-bottom: none; }
-    .npu-history-card table tbody tr:hover td { background: #f1f5f9; }
-    .npu-history-card tr.urgent-row td { background: #ffebeb !important; }
+    .npu-history-card table tbody tr:hover td { background: #f8fafc; }
+    .npu-history-card tr.urgent-row td { background: #fff7ed !important; }
+
     .npu-history-card .open-link {
-        color: var(--text-muted);
+        color: var(--detail-muted);
         text-decoration: none;
         font-size: 14px;
     }
-    .npu-history-card .open-link:hover { color: var(--primary-blue); }
+
+    .npu-history-card .open-link:hover { color: var(--detail-heading); }
+
+    .detail-modal .modal-content {
+        border: 1px solid var(--detail-border);
+        border-radius: 18px;
+        box-shadow: 0 20px 60px -25px rgba(15, 23, 42, 0.4);
+    }
+
+    .detail-modal .modal-header,
+    .detail-modal .modal-footer {
+        background: #fafafa;
+        border-color: var(--detail-border);
+    }
+
+    .detail-modal .modal-body textarea {
+        min-height: 120px;
+        border-radius: 12px;
+    }
+
+    @media (max-width: 991.98px) {
+        .aside-stack {
+            position: static;
+        }
+    }
+
+    @media (max-width: 767.98px) {
+        .detail-header {
+            padding: 1.2rem;
+        }
+
+        .detail-title {
+            font-size: 24px;
+        }
+
+        .comment-composer {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .comment-composer .btn-compact {
+            width: 100%;
+            justify-content: center;
+        }
+    }
 </style>
 
 <div class="detail-shell">
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center detail-header gap-3">
-        <h2 class="detail-title"><i class="bi bi-file-earmark-text text-muted me-2"></i>Reparación #<?= $rep['id'] ?></h2>
+        <div>
+            <div class="detail-kicker">Ficha de reparación</div>
+            <h2 class="detail-title">Reparación · <?= e($rep['equipo']) ?></h2>
+        </div>
         <div class="d-flex gap-2">
-            <a href="index.php" class="btn btn-light btn-compact border text-secondary"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+            <a href="index.php" class="btn btn-compact btn-toolbar-neutral"><i class="bi bi-arrow-left me-1"></i>Volver</a>
             <?php if ($user_role === 'admin'): ?>
-            <a href="reparacion_editar.php?id=<?= $rep['id'] ?>" class="btn btn-primary btn-compact"><i class="bi bi-pencil me-1"></i>Editar</a>
+            <a href="reparacion_editar.php?id=<?= $rep['id'] ?>" class="btn btn-compact btn-toolbar-primary"><i class="bi bi-pencil me-1"></i>Editar</a>
             <?php endif; ?>
         </div>
     </div>
 
-    <div class="row g-3">
+    <div class="row g-3 detail-layout">
         <!-- Columna Izquierda -->
         <div class="col-lg-8">
             <!-- Ficha Técnica -->
@@ -473,11 +714,11 @@ function getHistorialVisual($accion) {
                         
                         <div class="data-label">Sala</div>
                         <div class="data-value">
-                            <span class="badge bg-light text-dark border px-2 py-1 text-uppercase" style="font-size: 11px;"><?= e($rep['sala']) ?></span>
+                            <span class="data-chip"><?= e($rep['sala']) ?></span>
                         </div>
                         
                         <div class="data-label">Equipo / Familia</div>
-                        <div class="data-value text-primary fw-bold"><?= e($rep['equipo']) ?> <span class="text-muted fw-normal fst-italic ms-1" style="font-size: 12px;">(<?= e($rep['familia']) ?>)</span></div>
+                        <div class="data-value"><?= e($rep['equipo']) ?> <span class="text-muted fw-normal fst-italic ms-1" style="font-size: 12px;">(<?= e($rep['familia']) ?>)</span></div>
                         
                         <div class="data-label">NPU / Patrimonio</div>
                         <div class="data-value fw-bold text-dark"><?= e($rep['npu']) ?: '<span class="text-muted fw-normal fst-italic">N/A</span>' ?></div>
@@ -489,9 +730,9 @@ function getHistorialVisual($accion) {
                         <div class="data-value"><?= e($rep['parte']) ?: '<span class="text-muted fst-italic">N/A</span>' ?></div>
                     </div>
                     
-                    <hr class="my-3 text-muted opacity-25">
+                    <hr class="section-divider">
                     
-                    <h6 class="text-secondary fw-bold text-uppercase mb-2" style="font-size: 12px;"><i class="bi bi-clock-history me-1"></i>Tiempos de Proceso</h6>
+                    <div class="section-caption"><i class="bi bi-clock-history"></i>Tiempos de proceso</div>
                     <div class="data-grid">
                         <div class="data-label">En Reparación</div>
                         <div class="data-value"><?= formatDatetimeArg($rep['fecha_en_reparacion']) ?: '<span class="text-muted opacity-50">-</span>' ?></div>
@@ -590,20 +831,20 @@ function getHistorialVisual($accion) {
                     <h6 class="text-primary"><i class="bi bi-chat-text me-1"></i>Observaciones</h6>
                 </div>
                 <div class="card-body">
-                    <div class="bg-light border rounded p-3 mb-3" style="max-height: 250px; overflow-y: auto; white-space: pre-wrap; font-size: 13.5px;" id="observacionesText"><?= e($rep['observaciones']) ?: '<span class="text-muted fst-italic">Sin comentarios registrados.</span>' ?></div>
+                    <div class="observaciones-box mb-3" id="observacionesText"><?= e($rep['observaciones']) ?: '<span class="text-muted fst-italic">Sin comentarios registrados.</span>' ?></div>
                     
                     <form id="formComentario">
-                        <div class="d-flex gap-2 align-items-end">
+                        <div class="comment-composer">
                             <textarea id="nuevoComentario" class="form-control form-control-compact autosize flex-grow-1"
                                       placeholder="Agregar una nota técnica o avance... (Ctrl+Enter para enviar)"
                                       rows="1" <?= $can_manage_rep ? '' : 'disabled' ?>></textarea>
-                            <button class="btn btn-outline-primary btn-compact" type="submit" id="btnComentario" <?= $can_manage_rep ? '' : 'disabled' ?>>
+                            <button class="btn btn-compact btn-toolbar-primary" type="submit" id="btnComentario" <?= $can_manage_rep ? '' : 'disabled' ?>>
                                 <i class="bi bi-send me-1"></i>Enviar
                             </button>
                         </div>
                     </form>
                     <?php if (!$can_manage_rep): ?>
-                    <div class="text-muted mt-1" style="font-size: 11px;">Solo administrador o técnico asignado pueden comentar.</div>
+                    <div class="helper-note">Solo administrador o técnico asignado pueden comentar.</div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -643,16 +884,19 @@ function getHistorialVisual($accion) {
 
         <!-- Columna Derecha: Acciones Rápidas -->
         <div class="col-lg-4">
+            <div class="aside-stack">
             <!-- Asignación Técnico -->
             <div class="dense-card">
+                <div class="card-header">
+                    <h6><i class="bi bi-person-gear me-1"></i>Técnico asignado</h6>
+                </div>
                 <div class="card-body">
-                    <div class="text-muted text-uppercase fw-bold mb-2" style="font-size: 11px; letter-spacing: 0.05em;">Técnico Asignado</div>
                     <div class="d-flex align-items-center gap-2 mb-3">
                         <?php if ($rep['tecnico_nombre']): ?>
                             <div class="tech-avatar" style="background-color: <?= e(avatarColor($rep['tecnico_nombre'])) ?>;">
                                 <?= e(mb_strtoupper(mb_substr($rep['tecnico_nombre'], 0, 1, 'UTF-8'), 'UTF-8')) ?>
                             </div>
-                            <span class="fw-bold text-dark" id="textTecnico" style="font-size: 14px;"><?= e($rep['tecnico_nombre']) ?></span>
+                            <span class="aside-value" id="textTecnico"><?= e($rep['tecnico_nombre']) ?></span>
                         <?php else: ?>
                             <div class="tech-avatar"><i class="bi bi-person-x-fill"></i></div>
                             <span class="text-muted fst-italic" id="textTecnico" style="font-size: 14px;">Sin asignar</span>
@@ -668,22 +912,24 @@ function getHistorialVisual($accion) {
                         <?php endforeach; ?>
                     </select>
                     <?php elseif ($can_self_assign): ?>
-                        <button type="button" id="btnAutoAsignar" class="btn btn-primary btn-compact w-100 fw-bold shadow-none">
+                        <button type="button" id="btnAutoAsignar" class="btn btn-toolbar-primary btn-compact w-100 fw-bold shadow-none">
                             <i class="bi bi-person-check me-1"></i>Asignarme esta reparación
                         </button>
-                        <div class="text-muted mt-2" style="font-size: 11px;">Pasarás a ser el técnico a cargo y la reparación cambiará a "En Reparación".</div>
+                        <div class="aside-note">Pasarás a ser el técnico a cargo y la reparación cambiará a "En Reparación".</div>
                     <?php else: ?>
-                        <div class="text-muted" style="font-size: 11px;">Solo administrador puede reasignar.</div>
+                        <div class="aside-note">Solo administrador puede reasignar.</div>
                     <?php endif; ?>
                 </div>
             </div>
 
             <!-- Estado Actual -->
-            <div class="dense-card bg-light border-0">
+            <div class="dense-card">
+                <div class="card-header">
+                    <h6><i class="bi bi-activity me-1"></i>Estado actual</h6>
+                </div>
                 <div class="card-body">
-                    <div class="text-muted text-uppercase fw-bold mb-2" style="font-size: 11px; letter-spacing: 0.05em;">Estado Actual</div>
                     <div class="mb-3">
-                        <span id="badgeEstado" class="status-pill <?= getBadgeClass($rep['estado']) ?>"><?= e($rep['estado']) ?></span>
+                        <span id="badgeEstado" class="status-pill w-100 justify-content-center <?= getBadgeClass($rep['estado']) ?>"><?= e($rep['estado']) ?></span>
                     </div>
 
                     <div>
@@ -694,50 +940,58 @@ function getHistorialVisual($accion) {
                             <?php endforeach; ?>
                         </select>
                         <?php if (!$can_change_estado): ?>
-                        <div class="text-muted mt-1" style="font-size: 11px;">No tenés permisos para cambiar el estado.</div>
+                        <div class="aside-note">No tenés permisos para cambiar el estado.</div>
                         <?php endif; ?>
                     </div>
                 </div>
             </div>
 
             <!-- Prioridad -->
-            <div class="dense-card <?= $rep['urgente'] === 'SI' ? 'border-danger' : '' ?>">
+            <div class="dense-card">
+                <div class="card-header">
+                    <h6><i class="bi bi-exclamation-diamond me-1"></i>Prioridad</h6>
+                </div>
                 <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <div class="text-muted text-uppercase fw-bold" style="font-size: 11px; letter-spacing: 0.05em;">Prioridad</div>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div id="textPrioridad">
+                    <div class="summary-panel <?= $rep['urgente'] === 'SI' ? 'is-warning' : '' ?>">
+                        <div class="summary-label">Nivel de atención</div>
+                        <div id="textPrioridad" class="summary-value">
                             <?php if ($rep['urgente'] === 'SI'): ?>
-                                <span class="text-danger fw-bold" style="font-size: 14px;"><i class="bi bi-exclamation-triangle-fill me-1"></i>URGENTE</span>
+                                <span class="text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Urgente</span>
                             <?php else: ?>
-                                <span class="text-dark fw-medium" style="font-size: 14px;">Normal</span>
+                                <span>Normal</span>
                             <?php endif; ?>
                         </div>
-                        <button id="btnTogglePrioridad" class="btn btn-sm btn-compact btn-outline-<?= $rep['urgente'] === 'SI' ? 'danger' : 'secondary' ?>" <?= $can_change_prioridad ? '' : 'disabled' ?>>
-                            <?= $rep['urgente'] === 'SI' ? 'Quitar Urgencia' : 'Hacer Urgente' ?>
-                        </button>
+                        <div class="summary-text">Usá esta marca para destacar casos que requieren resolución o seguimiento prioritario.</div>
                     </div>
+                    <button id="btnTogglePrioridad" class="btn btn-sm btn-compact mt-3 w-100 <?= $rep['urgente'] === 'SI' ? 'btn-outline-danger' : 'btn-toolbar-neutral' ?>" <?= $can_change_prioridad ? '' : 'disabled' ?>>
+                        <?= $rep['urgente'] === 'SI' ? 'Quitar Urgencia' : 'Hacer Urgente' ?>
+                    </button>
                     <?php if (!$can_change_prioridad): ?>
-                    <div class="text-muted mt-2" style="font-size: 11px;">Solo administrador puede cambiar prioridad.</div>
+                    <div class="aside-note">Solo administrador puede cambiar prioridad.</div>
                     <?php endif; ?>
                 </div>
             </div>
 
             <!-- Devolver Reparación -->
-            <div class="dense-card border-warning">
-                <div class="card-body bg-warning bg-opacity-10">
-                    <div class="text-warning-emphasis text-uppercase fw-bold mb-1" style="font-size: 11px; letter-spacing: 0.05em;">Devolución</div>
-                    <p class="text-dark mb-2" style="font-size: 12px; line-height: 1.4;">Quita el técnico asignado y retrocede a Pendiente de Revisión.</p>
-                    <button id="btnDevolverReparacion" class="btn btn-warning btn-compact w-100 fw-bold shadow-none" <?= $can_devolver_rep ? '' : 'disabled' ?>>
+            <div class="dense-card">
+                <div class="card-header">
+                    <h6><i class="bi bi-arrow-counterclockwise me-1"></i>Devolución</h6>
+                </div>
+                <div class="card-body">
+                    <div class="summary-panel is-warning">
+                        <div class="summary-label">Acción administrativa</div>
+                        <div class="summary-text">Quita el técnico asignado y retrocede la reparación a "Pendiente de Revisión".</div>
+                    </div>
+                    <button id="btnDevolverReparacion" class="btn btn-warning btn-compact w-100 fw-bold shadow-none mt-3" <?= $can_devolver_rep ? '' : 'disabled' ?>>
                         <i class="bi bi-arrow-return-left me-1"></i>Devolver Reparación
                     </button>
                     <?php if (!$can_devolver_rep): ?>
-                    <div class="text-muted mt-2" style="font-size: 11px;">Sin permisos para devolver.</div>
+                    <div class="aside-note">Sin permisos para devolver.</div>
                     <?php endif; ?>
                 </div>
             </div>
 
+            </div>
         </div>
     </div>
 </div>
@@ -1032,7 +1286,7 @@ if (btnDevolverReparacion && !btnDevolverReparacion.disabled) {
 </script>
 
 <!-- Generic prompt modal: replaces the browser's prompt() with a textarea -->
-<div class="modal fade" id="actionModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade detail-modal" id="actionModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 460px;">
         <div class="modal-content" style="border-radius: 12px;">
             <div class="modal-header py-2 px-3">
