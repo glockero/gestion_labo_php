@@ -137,6 +137,7 @@ if (count($npu_list) > 0) {
         .main-content {
             height: 100vh;
             overflow: hidden;
+            padding: 0.35rem 0.85rem;
         }
 
         .main-content > .fade-in {
@@ -165,6 +166,42 @@ if (count($npu_list) > 0) {
                     0 4px 14px -2px rgba(148, 163, 184, 0.06);
         border: 1px solid var(--border-color);
         margin-bottom: 0.85rem;
+    }
+
+    @media (min-width: 992px) {
+        .page-title {
+            font-size: 18px;
+        }
+
+        .dashboard-header {
+            margin-bottom: 0.28rem;
+            padding: 0.28rem 0.5rem;
+        }
+
+        .dashboard-header form {
+            gap: 0.22rem !important;
+        }
+
+        .dashboard-header .row {
+            --bs-gutter-y: 0.22rem;
+        }
+
+        .search-input,
+        .dashboard-header .btn,
+        .urg-toggle {
+            height: 27px;
+            font-size: 11px;
+        }
+
+        .filter-select {
+            height: 26px;
+            font-size: 10.8px;
+        }
+
+        .filter-group-title {
+            font-size: 9px;
+            margin-bottom: 0.08rem;
+        }
     }
 
     .search-input-wrapper {
@@ -252,6 +289,32 @@ if (count($npu_list) > 0) {
                     0 4px 12px -2px rgba(148, 163, 184, 0.05),
                     inset 0 1px 0 0 #ffffff;
         animation: slideUpFade 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    @media (min-width: 992px) {
+        .tabs-section-container {
+            margin-bottom: 0.28rem;
+            padding: 0.25rem 0.45rem;
+        }
+
+        .tabs-section-header {
+            margin-bottom: 0.18rem;
+        }
+
+        .nav-pills-custom {
+            gap: 0.22rem;
+        }
+
+        .nav-tab-custom {
+            font-size: 10.4px;
+            gap: 0.2rem;
+            padding: 0.16rem 0.34rem;
+        }
+
+        .nav-tab-custom .badge {
+            font-size: 9.5px;
+            padding: 0.08rem 0.28rem;
+        }
     }
 
     .tabs-section-header {
@@ -545,6 +608,93 @@ if (count($npu_list) > 0) {
             flex: 1 1 auto;
             max-height: none;
             min-height: 0;
+        }
+    }
+
+    @media (min-width: 992px) {
+        .custom-table {
+            font-size: 9px;
+        }
+
+        .custom-table thead th {
+            font-size: 8.4px;
+            padding: 0.14rem 0.24rem;
+        }
+
+        .custom-table tbody td {
+            padding: 0.03rem 0.18rem;
+        }
+
+        .ingreso-cell,
+        .identificacion-cell {
+            gap: 0;
+            line-height: 1;
+        }
+
+        .ingreso-fecha,
+        .cell-date,
+        .cell-tech,
+        .cell-obs,
+            .identificacion-cell .cell-label,
+            .cell-equipo .sala {
+            font-size: 8.2px;
+        }
+
+        .cell-equipo .sala {
+            font-size: 7.3px;
+        }
+
+        .ingreso-hora {
+            font-size: 7.9px;
+        }
+
+        .identificacion-cell strong,
+        .cell-equipo a {
+            font-size: 8.8px;
+        }
+
+        .cell-equipo a {
+            font-size: 7.9px;
+        }
+
+        .tech-avatar {
+            width: 14px;
+            height: 14px;
+            font-size: 7.2px;
+        }
+
+        .status-pill {
+            max-width: 82px;
+            min-width: 62px;
+            padding: 0 3px;
+            font-size: 7.7px;
+            line-height: 0.9;
+        }
+
+        .action-btn {
+            width: 15px;
+            height: 15px;
+            font-size: 8.5px;
+        }
+
+        .acciones-cell {
+            gap: 1px;
+        }
+
+        .table-container > .p-2 {
+            padding-bottom: 0.16rem !important;
+            padding-top: 0.16rem !important;
+        }
+
+        .table-container > .p-2,
+        .table-container > .p-2 span,
+        .table-container > .p-2 label,
+        .per-page-select {
+            font-size: 10.5px !important;
+        }
+
+        .per-page-select {
+            height: 24px;
         }
     }
 
