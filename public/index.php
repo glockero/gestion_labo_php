@@ -376,13 +376,41 @@ if (count($npu_list) > 0) {
         color: var(--text-main);
     }
 
+    /* Zebra striping: filas pares un toque más oscuro */
+    .custom-table tbody tr:nth-child(even):not(.urgent-row) td {
+        background: #eef2f7;
+    }
+
     .custom-table tbody tr:last-child td {
         border-bottom: none;
     }
 
+    /* Hover: borde negro completo (sin cambio de color de fondo) */
     .custom-table tbody tr:hover td {
-        background-color: var(--bg-light);
+        box-shadow: inset 0 1px 0 0 #000, inset 0 -1px 0 0 #000;
     }
+    /* Preserva el stripe de estado en el primer td y suma el borde negro top/bottom */
+    .custom-table tbody tr:not(.urgent-row):hover td:first-child {
+        box-shadow: inset 3px 0 0 0 var(--row-stripe, transparent),
+                    inset 0 1px 0 0 #000,
+                    inset 0 -1px 0 0 #000;
+    }
+    .custom-table tbody tr.urgent-row:hover td:first-child {
+        box-shadow: inset 1px 0 0 0 #000, inset 0 1px 0 0 #000, inset 0 -1px 0 0 #000;
+    }
+    .custom-table tbody tr:hover td:last-child {
+        box-shadow: inset -1px 0 0 0 #000, inset 0 1px 0 0 #000, inset 0 -1px 0 0 #000;
+    }
+
+    /* Stripe lateral por estado (no se aplica a urgent-row para no pisar el contorno rojo) */
+    .custom-table tbody tr:not(.urgent-row) td:first-child {
+        box-shadow: inset 3px 0 0 0 var(--row-stripe, transparent);
+    }
+    .custom-table tbody tr.estado-success   { --row-stripe: #10b981; }
+    .custom-table tbody tr.estado-warning   { --row-stripe: #f59e0b; }
+    .custom-table tbody tr.estado-danger    { --row-stripe: #ef4444; }
+    .custom-table tbody tr.estado-info      { --row-stripe: #3b82f6; }
+    .custom-table tbody tr.estado-secondary { --row-stripe: #94a3b8; }
 
     /* Scrollbar moderna */
     .table-scroll::-webkit-scrollbar {
@@ -1260,8 +1288,16 @@ if (count($npu_list) > 0) {
                 $avatarPalette = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#475569'];
                 foreach ($reparaciones as $r):
                     $isUrgent = $r['urgente'] === 'SI';
+                    $badge_class = 'status-secondary';
+                    $est = strtoupper($r['estado']);
+                    if (strpos($est, 'REPARADO') !== false) $badge_class = 'status-success';
+                    elseif (strpos($est, 'PEND') !== false) $badge_class = 'status-warning';
+                    elseif (strpos($est, 'SIN REPARACION') !== false) $badge_class = 'status-danger';
+                    elseif (strpos($est, 'PRUEBA') !== false) $badge_class = 'status-info';
+                    $estado_row_class = 'estado-' . substr($badge_class, strlen('status-'));
+                    $tr_classes = trim(($isUrgent ? 'urgent-row ' : '') . $estado_row_class);
                 ?>
-                <tr<?= $isUrgent ? ' class="urgent-row"' : '' ?>>
+                <tr class="<?= $tr_classes ?>">
                     <td class="col-ingreso">
                         <?php
                         $fecha_fmt = formatDatetimeArg($r['fecha']);
@@ -1318,14 +1354,6 @@ if (count($npu_list) > 0) {
                     </td>
                     
                     <td>
-                        <?php
-                        $badge_class = 'status-secondary';
-                        $est = strtoupper($r['estado']);
-                        if (strpos($est, 'REPARADO') !== false) $badge_class = 'status-success';
-                        elseif (strpos($est, 'PEND') !== false) $badge_class = 'status-warning';
-                        elseif (strpos($est, 'SIN REPARACION') !== false) $badge_class = 'status-danger';
-                        elseif (strpos($est, 'PRUEBA') !== false) $badge_class = 'status-info';
-                        ?>
                         <span class="status-pill <?= $badge_class ?>"><?= e($r['estado']) ?></span>
                     </td>
 
