@@ -112,11 +112,15 @@ function getHistorialVisual($accion) {
 
 <style>
     :root {
-        --border-color: #e5e7eb;
-        --bg-light: #f8fafc;
-        --text-main: #1e293b;
-        --text-muted: #64748b;
-        --primary-blue: #2563eb;
+        --border-color: #cbd5e1; /* Higher contrast border */
+        --bg-light: #f1f5f9; /* Slightly deeper slate light background */
+        --text-main: #0f172a; /* Deeper black-slate text for pure readability */
+        --text-muted: #475569; /* Much higher contrast muted label text */
+        --primary-blue: #1d4ed8; /* Pristine deeper blue */
+    }
+
+    body {
+        background-color: #edf2f7 !important; /* Deeper cool slate background for beautiful card frames */
     }
 
     .detail-shell {
@@ -130,40 +134,50 @@ function getHistorialVisual($accion) {
 
     .detail-title {
         font-size: 26px;
-        font-weight: 700;
+        font-weight: 800;
+        color: var(--text-main);
         margin: 0;
-        letter-spacing: -0.01em;
+        letter-spacing: -0.02em;
     }
 
     .dense-card {
-        background: #fff;
-        border-radius: 8px;
-        border: 1px solid var(--border-color);
-        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
-        margin-bottom: 1rem;
+        background: #ffffff;
+        border-radius: 12px; /* Smoother curves */
+        border: 1px solid var(--border-color); /* Higher contrast border */
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.015), 
+                    0 4px 12px -2px rgba(148, 163, 184, 0.05);
+        margin-bottom: 1.25rem;
         overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
     .dense-card .card-header {
-        background: #fff;
-        padding: 0.6rem 1rem;
-        border-bottom: 1px solid var(--border-color);
+        background-color: #e8eff9 !important; /* Soft premium cool-blue silver tint for light, elegant high contrast */
+        padding: 0.65rem 1rem;
+        border-bottom: 1px solid #cbd5e1 !important;
+        border-left: 4px solid var(--primary-blue) !important; /* Grounding high-contrast vertical blue anchor line */
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
 
     .dense-card .card-header h6 {
-        font-size: 14px;
-        font-weight: 700;
+        font-size: 13.5px;
+        font-weight: 800;
         margin: 0;
-        color: var(--text-main);
+        color: #1e3a8a !important; /* Deep corporate navy blue for clear contrast on light blue background */
         text-transform: uppercase;
-        letter-spacing: 0.02em;
+        letter-spacing: 0.05em;
+    }
+
+    .dense-card .card-header h6 i {
+        color: var(--primary-blue) !important; /* Vibrant primary blue icon accent */
+        font-size: 14.5px;
+        margin-right: 0.25rem;
     }
 
     .dense-card .card-body {
-        padding: 1rem;
+        padding: 1.1rem;
     }
 
     /* Grid for data */
@@ -186,14 +200,16 @@ function getHistorialVisual($accion) {
 
     .data-label {
         color: var(--text-muted);
-        font-size: 12px;
-        font-weight: 600;
+        font-size: 11.5px;
+        font-weight: 700;
         text-transform: uppercase;
+        letter-spacing: 0.03em;
     }
 
     .data-value {
         font-size: 14px;
-        font-weight: 500;
+        font-weight: 600;
+        color: #0f172a;
     }
 
     .btn-compact {
@@ -204,19 +220,24 @@ function getHistorialVisual($accion) {
         align-items: center;
         border-radius: 6px;
         font-weight: 600;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        transition: all 0.15s ease;
     }
 
     .form-control-compact, .form-select-compact {
         height: 38px;
         font-size: 13px;
         border-radius: 6px;
-        border: 1px solid #d1d5db;
+        border: 1px solid #94a3b8; /* Higher contrast border */
         padding: 0.4rem 0.6rem;
+        background-color: #ffffff;
+        color: var(--text-main);
+        transition: all 0.15s ease;
     }
 
     .form-control-compact:focus, .form-select-compact:focus {
         border-color: var(--primary-blue);
-        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
     }
 
     .list-group-compact .list-group-item {
@@ -232,19 +253,20 @@ function getHistorialVisual($accion) {
         justify-content: center;
         padding: 0.4rem 0.8rem;
         font-size: 13px;
-        font-weight: 700;
+        font-weight: 750;
         border-radius: 6px;
-        letter-spacing: 0.02em;
+        letter-spacing: 0.03em;
         text-transform: uppercase;
         width: 100%;
         text-align: center;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
     }
     
-    .status-success { background-color: #ecfdf5; color: #166534; border: 1px solid #a7f3d0; }
-    .status-warning { background-color: #fefce8; color: #854d0e; border: 1px solid #fde047; }
-    .status-danger { background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-    .status-info { background-color: #f0f9ff; color: #075985; border: 1px solid #bae6fd; }
-    .status-secondary { background-color: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
+    .status-success { background-color: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+    .status-warning { background-color: #fefce8; color: #b45309; border: 1px solid #fde047; }
+    .status-danger { background-color: #fff5f5; color: #c53030; border: 1px solid #fca5a5; }
+    .status-info { background-color: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
+    .status-secondary { background-color: #f8fafc; color: #475569; border: 1px solid #cbd5e1; }
     .status-primary { background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
     .status-dark { background-color: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; }
 
@@ -273,7 +295,7 @@ function getHistorialVisual($accion) {
         top: 1rem;
         bottom: 1rem;
         width: 2px;
-        background: #e2e8f0;
+        background: #cbd5e1; /* Higher contrast line */
     }
     .timeline-item {
         position: relative;
@@ -289,22 +311,22 @@ function getHistorialVisual($accion) {
         height: 22px;
         border-radius: 50%;
         background: #fff;
-        border: 2px solid #cbd5e1;
+        border: 2px solid #94a3b8;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         font-size: 11px;
-        color: #64748b;
+        color: #475569;
         z-index: 1;
     }
-    .timeline-dot.dot-blue   { background: #2563eb; border-color: #2563eb; color: #fff; }
-    .timeline-dot.dot-violet { background: #7c3aed; border-color: #7c3aed; color: #fff; }
-    .timeline-dot.dot-amber  { background: #f59e0b; border-color: #f59e0b; color: #fff; }
-    .timeline-dot.dot-cyan   { background: #06b6d4; border-color: #06b6d4; color: #fff; }
-    .timeline-dot.dot-orange { background: #ea580c; border-color: #ea580c; color: #fff; }
-    .timeline-dot.dot-red    { background: #ef4444; border-color: #ef4444; color: #fff; }
-    .timeline-dot.dot-green  { background: #16a34a; border-color: #16a34a; color: #fff; }
-    .timeline-dot.dot-gray   { background: #94a3b8; border-color: #94a3b8; color: #fff; }
+    .timeline-dot.dot-blue   { background: #2563eb; border-color: #1d4ed8; color: #fff; }
+    .timeline-dot.dot-violet { background: #7c3aed; border-color: #6d28d9; color: #fff; }
+    .timeline-dot.dot-amber  { background: #f59e0b; border-color: #d97706; color: #fff; }
+    .timeline-dot.dot-cyan   { background: #06b6d4; border-color: #0891b2; color: #fff; }
+    .timeline-dot.dot-orange { background: #ea580c; border-color: #c2410c; color: #fff; }
+    .timeline-dot.dot-red    { background: #ef4444; border-color: #b91c1c; color: #fff; }
+    .timeline-dot.dot-green  { background: #16a34a; border-color: #15803d; color: #fff; }
+    .timeline-dot.dot-gray   { background: #94a3b8; border-color: #64748b; color: #fff; }
 
     .timeline-content {
         font-size: 13px;
@@ -327,13 +349,14 @@ function getHistorialVisual($accion) {
     }
     .timeline-content .detalle {
         margin-top: 0.4rem;
-        padding: 0.4rem 0.55rem;
-        background: #f8fafc;
-        border-left: 3px solid #cbd5e1;
-        border-radius: 0 4px 4px 0;
+        padding: 0.45rem 0.65rem;
+        background: #f1f5f9; /* Higher contrast background */
+        border-left: 3px solid #64748b; /* Thick accent border */
+        border-radius: 0 6px 6px 0;
         font-size: 12px;
-        color: #334155;
+        color: #1e293b;
         font-style: italic;
+        box-shadow: inset 0 1px 2px rgba(15,23,42,0.02);
     }
     .timeline-empty {
         padding: 1.25rem;
@@ -375,7 +398,7 @@ function getHistorialVisual($accion) {
         user-select: none;
         transition: background 0.12s;
     }
-    .npu-history-card .card-header:hover { background: #f8fafc; }
+    .npu-history-card .card-header:hover { background: #e2e8f0; }
     .npu-history-card .card-header .toggle-icon {
         transition: transform 0.2s ease;
         color: var(--text-muted);
@@ -399,23 +422,23 @@ function getHistorialVisual($accion) {
         margin: 0;
     }
     .npu-history-card table thead th {
-        background: #f8fafc;
-        color: var(--text-muted);
+        background: #334155 !important; /* Dark header for history table */
+        color: #f8fafc !important;
         font-size: 10.5px;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.04em;
-        padding: 0.4rem 0.6rem;
-        border-bottom: 1px solid var(--border-color);
+        padding: 0.5rem 0.6rem;
+        border-bottom: 2px solid #1e293b !important;
     }
     .npu-history-card table tbody td {
         padding: 0.35rem 0.6rem;
-        border-bottom: 1px solid #f1f5f9;
+        border-bottom: 1px solid #cbd5e1;
         vertical-align: middle;
     }
     .npu-history-card table tbody tr:last-child td { border-bottom: none; }
-    .npu-history-card table tbody tr:hover td { background: #f8fafc; }
-    .npu-history-card tr.urgent-row td { background: #fef2f2 !important; }
+    .npu-history-card table tbody tr:hover td { background: #f1f5f9; }
+    .npu-history-card tr.urgent-row td { background: #ffebeb !important; }
     .npu-history-card .open-link {
         color: var(--text-muted);
         text-decoration: none;

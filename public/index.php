@@ -7,7 +7,7 @@ require_once __DIR__ . '/../app/CatalogoModel.php';
 $is_tecnico = $user_role === 'tecnico';
 $tabs_estado = [
     'URGENTES' => 'Urgentes',
-    'PEND_REPARACION' => 'Pend. de Reparación',
+    'PEND_REPARACION' => 'Pend. Rep.',
     'EN_REPARACION' => 'En Reparación',
     'REPARADOS' => 'Reparados',
     'PENDIENTES' => 'Pendientes',
@@ -118,30 +118,35 @@ if (count($npu_list) > 0) {
 ?>
 <style>
     :root {
-        --border-color: #e5e7eb;
-        --bg-light: #f8fafc;
-        --text-main: #1e293b;
-        --text-muted: #64748b;
-        --primary-blue: #2563eb;
+        --border-color: #cbd5e1; /* Higher contrast border */
+        --bg-light: #f1f5f9; /* Slightly deeper slate light background */
+        --text-main: #0f172a; /* Deeper black-slate text for pure readability */
+        --text-muted: #475569; /* Much higher contrast muted label text */
+        --primary-blue: #1d4ed8; /* Pristine deeper blue */
+    }
+
+    body {
+        background-color: #edf2f7 !important; /* Deeper cool slate background for beautiful card frames */
     }
 
     /* Page Title */
     .page-title {
         font-size: 28px;
-        font-weight: 700;
+        font-weight: 800;
         color: var(--text-main);
         margin-bottom: 0;
-        letter-spacing: -0.01em;
+        letter-spacing: -0.02em;
     }
 
     /* Search & Filter Header */
     .dashboard-header {
-        background: #fff;
-        border-radius: 8px;
-        padding: 0.5rem 0.75rem;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 0.65rem 0.9rem;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02), 
+                    0 4px 14px -2px rgba(148, 163, 184, 0.06);
         border: 1px solid var(--border-color);
-        margin-bottom: 0.75rem;
+        margin-bottom: 0.85rem;
     }
 
     .search-input-wrapper {
@@ -151,166 +156,342 @@ if (count($npu_list) > 0) {
 
     .search-input-wrapper .bi-search {
         position: absolute;
-        left: 0.6rem;
+        left: 0.65rem;
         top: 50%;
         transform: translateY(-50%);
-        color: #9ca3af;
-        font-size: 0.8rem;
+        color: #64748b; /* Higher contrast search icon */
+        font-size: 0.85rem;
     }
 
     .search-input {
-        padding-left: 1.9rem;
+        padding-left: 2rem;
         border-radius: 6px;
         height: 32px;
         font-size: 12.5px;
-        border: 1px solid #d1d5db;
-        background-color: var(--bg-light);
-        transition: all 0.15s;
+        border: 1px solid #94a3b8; /* More contrast */
+        background-color: #ffffff;
+        color: var(--text-main);
+        transition: all 0.15s ease-in-out;
+    }
+
+    .search-input::placeholder {
+        color: #94a3b8;
     }
 
     .search-input:focus {
-        background-color: #fff;
+        background-color: #ffffff;
         border-color: var(--primary-blue);
-        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
     }
 
     .dashboard-header .btn {
         height: 32px;
-        padding: 0 0.85rem;
+        padding: 0 1rem;
         font-size: 12px;
         display: inline-flex;
         align-items: center;
         border-radius: 6px;
         font-weight: 600;
         white-space: nowrap;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        transition: all 0.15s ease;
     }
 
     /* Compact Filter Cards */
     .filter-group-title {
-        font-size: 10.5px;
-        font-weight: 700;
+        font-size: 10px;
+        font-weight: 800;
         color: var(--text-muted);
-        margin-bottom: 0.1rem;
+        margin-bottom: 0.15rem;
         text-transform: uppercase;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.05em;
     }
 
     .filter-select {
         height: 30px;
         font-size: 12px;
         border-radius: 6px;
-        border-color: #d1d5db;
-        padding: 0 1.4rem 0 0.45rem;
-        background-color: var(--bg-light);
+        border: 1px solid #94a3b8; /* More contrast */
+        padding: 0 1.4rem 0 0.5rem;
+        background-color: #ffffff;
+        color: var(--text-main);
+        transition: all 0.15s ease;
+    }
+
+    .filter-select:focus {
+        border-color: var(--primary-blue);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    /* Enhanced Tab Container Section */
+    .tabs-section-container {
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        border-radius: 12px;
+        padding: 0.65rem 0.8rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.015), 
+                    0 4px 12px -2px rgba(148, 163, 184, 0.05),
+                    inset 0 1px 0 0 #ffffff;
+        animation: slideUpFade 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .tabs-section-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        gap: 0.4rem;
+        padding: 0 0.25rem;
+    }
+
+    .tabs-section-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        border-radius: 4px;
+        background: #f1f5f9;
+        color: #64748b;
+        font-size: 10px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .tabs-section-title {
+        font-size: 11px;
+        font-weight: 700;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .tabs-section-divider {
+        flex-grow: 1;
+        height: 1px;
+        background: radial-gradient(circle, #e2e8f0 0%, rgba(226, 232, 240, 0) 100%);
+        margin: 0 0.5rem;
+    }
+
+    .tabs-section-meta {
+        font-size: 11px;
+        font-weight: 600;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        padding: 0.1rem 0.45rem;
+        border-radius: 9999px;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+    }
+
+    .live-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: #10b981;
+        display: inline-block;
+        position: relative;
+    }
+
+    .live-dot::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background-color: #10b981;
+        animation: pulse-dot 1.8s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+        top: 0;
+        left: 0;
+    }
+
+    @keyframes pulse-dot {
+        0% {
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+        50% {
+            opacity: 0.4;
+        }
+        100% {
+            transform: scale(2.4);
+            opacity: 0;
+        }
+    }
+
+    @keyframes slideUpFade {
+        from {
+            opacity: 0;
+            transform: translateY(6px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     /* Tabs (Chips) */
     .nav-pills-custom {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.35rem;
-        margin-bottom: 1rem;
+        gap: 0.45rem;
+        margin-bottom: 0;
     }
 
     .nav-tab-custom {
-        border-radius: 6px;
-        padding: 0.35rem 0.75rem;
+        border-radius: 8px;
+        padding: 0.32rem 0.68rem;
         font-weight: 600;
-        font-size: 13px;
-        color: var(--text-muted);
-        background: #fff;
-        border: 1px solid var(--border-color);
+        font-size: 12.5px;
+        color: #475569;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         text-decoration: none;
         display: flex;
         align-items: center;
-        gap: 0.35rem;
-        transition: all 0.15s;
+        gap: 0.38rem;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
     }
 
     .nav-tab-custom:hover {
-        background: var(--bg-light);
-        color: var(--text-main);
+        background: #f8fafc;
+        color: #0f172a;
+        border-color: #cbd5e1;
+        transform: translateY(-1.5px);
+        box-shadow: 0 4px 10px -2px rgba(15, 23, 42, 0.06), 
+                    0 2px 4px -2px rgba(15, 23, 42, 0.04);
     }
 
     .nav-tab-custom.active {
-        color: #fff;
-        border-color: transparent;
+        color: #ffffff !important;
+        border-color: transparent !important;
+        transform: translateY(-1px);
+        text-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
     }
-    
-    /* URGENTES inactive: red-tinted outline so it still stands out among neutral tabs */
+
+    .nav-tab-custom .bi {
+        font-size: 13.5px;
+        transition: transform 0.2s ease, opacity 0.2s ease;
+        opacity: 0.85;
+    }
+
+    .nav-tab-custom:hover .bi {
+        transform: scale(1.15);
+        opacity: 1;
+    }
+
+    .nav-tab-custom.active .bi {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+
+    /* URGENTES inactive style */
     .nav-tab-custom[data-estado="URGENTES"] {
-        background-color: #fef2f2;
-        color: #b91c1c;
-        border-color: #fecaca;
+        background-color: #fff5f5;
+        color: #c53030;
+        border-color: #feb2b2;
     }
-
+    .nav-tab-custom[data-estado="URGENTES"]:not(.active) .bi {
+        color: #e53e3e;
+    }
     .nav-tab-custom[data-estado="URGENTES"]:hover {
-        background-color: #fee2e2;
-        color: #991b1b;
-        border-color: #fca5a5;
+        background-color: #fff0f0;
+        color: #9b2c2c;
+        border-color: #fc8181;
     }
 
+    /* Active State Color Gradients & Shadows */
     .nav-tab-custom[data-estado="URGENTES"].active {
-        background-color: #ef4444;
-        color: #fff;
-        border-color: #ef4444;
+        background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%) !important;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.28) !important;
+    }
+    .nav-tab-custom[data-estado="PEND_REPARACION"].active {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%) !important;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28) !important;
+    }
+    .nav-tab-custom[data-estado="EN_REPARACION"].active {
+        background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%) !important;
+        box-shadow: 0 4px 12px rgba(109, 40, 217, 0.28) !important;
+    }
+    .nav-tab-custom[data-estado="REPARADOS"].active {
+        background: linear-gradient(135deg, #10b981 0%, #047857 100%) !important;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.28) !important;
+    }
+    .nav-tab-custom[data-estado="PENDIENTES"].active {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.28) !important;
+    }
+    .nav-tab-custom[data-estado="SIN_REPARACION"].active {
+        background: linear-gradient(135deg, #64748b 0%, #475569 100%) !important;
+        box-shadow: 0 4px 12px rgba(100, 116, 139, 0.28) !important;
+    }
+    .nav-tab-custom[data-estado="TODAS"].active {
+        background: linear-gradient(135deg, #f97316 0%, #c2410c 100%) !important;
+        box-shadow: 0 4px 12px rgba(249, 115, 22, 0.28) !important;
+    }
+    .nav-tab-custom[data-estado="MIS_REPARACIONES"].active {
+        background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%) !important;
+        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.28) !important;
     }
 
-    .nav-tab-custom[data-estado="URGENTES"].active:hover {
-        background-color: #dc2626;
-        color: #fff;
-        border-color: #dc2626;
-    }
-
-    .nav-tab-custom[data-estado="URGENTES"] .badge {
-        color: #b91c1c !important;
-        background: #fee2e2 !important;
-        font-weight: 700;
-    }
-
-    .nav-tab-custom[data-estado="URGENTES"].active .badge {
-        color: #dc2626 !important;
-        background: rgba(255, 255, 255, 0.9) !important;
-    }
-
-    .nav-tab-custom[data-estado="PEND_REPARACION"].active { background-color: #2563eb; }
-    .nav-tab-custom[data-estado="PEND_REPARACION"].active .badge { color: #2563eb !important; background: rgba(255,255,255,0.9) !important; font-weight: 700; }
-
-    .nav-tab-custom[data-estado="EN_REPARACION"].active { background-color: #7c3aed; }
-    .nav-tab-custom[data-estado="EN_REPARACION"].active .badge { color: #7c3aed !important; background: rgba(255,255,255,0.9) !important; font-weight: 700; }
-
-    .nav-tab-custom[data-estado="REPARADOS"].active { background-color: #16a34a; }
-    .nav-tab-custom[data-estado="REPARADOS"].active .badge { color: #16a34a !important; background: rgba(255,255,255,0.9) !important; font-weight: 700; }
-
-    .nav-tab-custom[data-estado="PENDIENTES"].active { background-color: #d97706; }
-    .nav-tab-custom[data-estado="PENDIENTES"].active .badge { color: #b45309 !important; background: rgba(255,255,255,0.9) !important; font-weight: 700; }
-
-    .nav-tab-custom[data-estado="SIN_REPARACION"].active { background-color: #64748b; }
-    .nav-tab-custom[data-estado="SIN_REPARACION"].active .badge { color: #475569 !important; background: rgba(255,255,255,0.9) !important; font-weight: 700; }
-
-    .nav-tab-custom[data-estado="TODAS"].active { background-color: #f97316; }
-    .nav-tab-custom[data-estado="TODAS"].active .badge { color: #ea580c !important; background: rgba(255,255,255,0.9) !important; font-weight: 700; }
-
-    .nav-tab-custom[data-estado="MIS_REPARACIONES"].active { background-color: #0ea5e9; }
-    .nav-tab-custom[data-estado="MIS_REPARACIONES"].active .badge { color: #0284c7 !important; background: rgba(255,255,255,0.9) !important; font-weight: 700; }
-
-    /* Color the icon of each tab to its category so inactive tabs still hint
-       at their meaning instead of being a uniform gray row. */
-    .nav-tab-custom[data-estado="PEND_REPARACION"]:not(.active)  .bi { color: #2563eb; }
-    .nav-tab-custom[data-estado="EN_REPARACION"]:not(.active)    .bi { color: #7c3aed; }
-    .nav-tab-custom[data-estado="REPARADOS"]:not(.active)        .bi { color: #16a34a; }
-    .nav-tab-custom[data-estado="PENDIENTES"]:not(.active)       .bi { color: #d97706; }
+    /* Inactive specific icon hints */
+    .nav-tab-custom[data-estado="PEND_REPARACION"]:not(.active)  .bi { color: #3b82f6; }
+    .nav-tab-custom[data-estado="EN_REPARACION"]:not(.active)    .bi { color: #8b5cf6; }
+    .nav-tab-custom[data-estado="REPARADOS"]:not(.active)        .bi { color: #10b981; }
+    .nav-tab-custom[data-estado="PENDIENTES"]:not(.active)       .bi { color: #f59e0b; }
     .nav-tab-custom[data-estado="SIN_REPARACION"]:not(.active)   .bi { color: #64748b; }
     .nav-tab-custom[data-estado="TODAS"]:not(.active)            .bi { color: #f97316; }
     .nav-tab-custom[data-estado="MIS_REPARACIONES"]:not(.active) .bi { color: #0ea5e9; }
 
+    /* Count Badge Styling */
     .nav-tab-custom .badge {
-        font-size: 12px;
-        padding: 0.2em 0.4em;
-        background: rgba(0,0,0,0.08) !important;
-        color: inherit !important;
-        border: none !important;
+        font-size: 11px;
+        font-weight: 750;
+        padding: 0.18rem 0.45rem;
+        background-color: #f1f5f9 !important;
+        color: #475569 !important;
+        border: 1px solid #e2e8f0 !important;
+        transition: all 0.2s ease;
+        line-height: 1;
     }
+
+    .nav-tab-custom:hover .badge {
+        background-color: #e2e8f0 !important;
+        color: #1e293b !important;
+        border-color: #cbd5e1 !important;
+    }
+
+    .nav-tab-custom[data-estado="URGENTES"] .badge {
+        background-color: #ffebeb !important;
+        color: #c53030 !important;
+        border-color: #fecaca !important;
+    }
+
+    .nav-tab-custom[data-estado="URGENTES"]:hover .badge {
+        background-color: #fecaca !important;
+        color: #9b2c2c !important;
+        border-color: #fca5a5 !important;
+    }
+
+    .nav-tab-custom.active .badge {
+        background-color: #ffffff !important;
+        border-color: transparent !important;
+        font-weight: 800;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), inset 0 1px 0 0 rgba(255,255,255,0.2);
+    }
+
+    .nav-tab-custom[data-estado="URGENTES"].active .badge { color: #c53030 !important; }
+    .nav-tab-custom[data-estado="PEND_REPARACION"].active .badge { color: #1d4ed8 !important; }
+    .nav-tab-custom[data-estado="EN_REPARACION"].active .badge { color: #6d28d9 !important; }
+    .nav-tab-custom[data-estado="REPARADOS"].active .badge { color: #047857 !important; }
+    .nav-tab-custom[data-estado="PENDIENTES"].active .badge { color: #b45309 !important; }
+    .nav-tab-custom[data-estado="SIN_REPARACION"].active .badge { color: #475569 !important; }
+    .nav-tab-custom[data-estado="TODAS"].active .badge { color: #c2410c !important; }
+    .nav-tab-custom[data-estado="MIS_REPARACIONES"].active .badge { color: #0369a1 !important; }
 
     /* Table Styling */
     .table-container {
@@ -358,13 +539,14 @@ if (count($npu_list) > 0) {
         position: sticky;
         top: 0;
         z-index: 10;
-        background-color: var(--bg-light);
-        color: var(--text-muted);
+        background-color: #1e293b !important; /* Deep dark slate to ground the design */
+        color: #f8fafc !important; /* Pristine off-white */
         font-weight: 700;
         text-transform: uppercase;
-        font-size: 12px;
-        padding: 0.6rem 0.8rem;
-        border-bottom: 1px solid var(--border-color);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        padding: 0.65rem 0.8rem;
+        border-bottom: 2px solid #0f172a !important; /* Darker bottom border */
         white-space: nowrap;
     }
 
@@ -372,34 +554,35 @@ if (count($npu_list) > 0) {
         background: #ffffff;
         padding: 0.5rem 0.8rem;
         vertical-align: middle;
-        border-bottom: 1px solid var(--border-color);
+        border-bottom: 1px solid #cbd5e1; /* Clear grid line border */
         color: var(--text-main);
     }
 
-    /* Zebra striping: filas pares un toque más oscuro */
+    /* Zebra striping: alternate rows are light slate-tinted off-white for crisp high-density contrast */
     .custom-table tbody tr:nth-child(even):not(.urgent-row) td {
-        background: #eef2f7;
+        background: #f8fafc;
     }
 
     .custom-table tbody tr:last-child td {
         border-bottom: none;
     }
 
-    /* Hover: borde negro completo (sin cambio de color de fondo) */
+    /* Hover: extremely elegant blue-gray highlight with thin accent line */
     .custom-table tbody tr:hover td {
-        box-shadow: inset 0 1px 0 0 #000, inset 0 -1px 0 0 #000;
+        background-color: #f1f5f9 !important; /* contrast grey on hover */
+        box-shadow: inset 0 1px 0 0 #3b82f6, inset 0 -1px 0 0 #3b82f6;
     }
-    /* Preserva el stripe de estado en el primer td y suma el borde negro top/bottom */
+    /* Preserves state stripe on first column, adding the blue highlight hover line */
     .custom-table tbody tr:not(.urgent-row):hover td:first-child {
         box-shadow: inset 3px 0 0 0 var(--row-stripe, transparent),
-                    inset 0 1px 0 0 #000,
-                    inset 0 -1px 0 0 #000;
+                    inset 0 1px 0 0 #3b82f6,
+                    inset 0 -1px 0 0 #3b82f6;
     }
     .custom-table tbody tr.urgent-row:hover td:first-child {
-        box-shadow: inset 1px 0 0 0 #000, inset 0 1px 0 0 #000, inset 0 -1px 0 0 #000;
+        box-shadow: inset 1px 0 0 0 #3b82f6, inset 0 1px 0 0 #3b82f6, inset 0 -1px 0 0 #3b82f6;
     }
     .custom-table tbody tr:hover td:last-child {
-        box-shadow: inset -1px 0 0 0 #000, inset 0 1px 0 0 #000, inset 0 -1px 0 0 #000;
+        box-shadow: inset -1px 0 0 0 #3b82f6, inset 0 1px 0 0 #3b82f6, inset 0 -1px 0 0 #3b82f6;
     }
 
     /* Stripe lateral por estado (no se aplica a urgent-row para no pisar el contorno rojo) */
@@ -581,9 +764,10 @@ if (count($npu_list) > 0) {
         flex-wrap: wrap;
         margin-bottom: 0.75rem;
         padding: 0.45rem 0.75rem;
-        background: #f8fafc;
+        background: #ffffff;
         border: 1px solid var(--border-color);
-        border-radius: 6px;
+        border-radius: 8px;
+        box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.02);
     }
     .active-filters .af-label {
         font-size: 11px;
@@ -1238,27 +1422,38 @@ if (count($npu_list) > 0) {
 <?php endif; ?>
 
 <!-- Nav Tabs (Chips) -->
-<div class="nav-pills-custom">
-    <?php foreach ($tabs_estado as $valor_estado => $etiqueta_estado): 
-        $qParams = $_GET;
-        $qParams['estado'] = $valor_estado;
-        $qParams['page'] = 1;
-        $url = '?' . http_build_query($qParams);
-        $activeClass = $estado_actual === $valor_estado ? 'active' : '';
-    ?>
-        <a href="<?= $url ?>" class="nav-tab-custom <?= $activeClass ?>" data-estado="<?= $valor_estado ?>">
-           <?php if ($valor_estado == 'URGENTES'): ?><i class="bi bi-exclamation-triangle-fill"></i>
-           <?php elseif ($valor_estado == 'MIS_REPARACIONES'): ?><i class="bi bi-person-workspace"></i>
-           <?php elseif ($valor_estado == 'PEND_REPARACION'): ?><i class="bi bi-inbox"></i>
-           <?php elseif ($valor_estado == 'EN_REPARACION'): ?><i class="bi bi-tools"></i>
-           <?php elseif ($valor_estado == 'REPARADOS'): ?><i class="bi bi-check2-circle"></i>
-           <?php elseif ($valor_estado == 'SIN_REPARACION'): ?><i class="bi bi-x-octagon"></i>
-           <?php elseif ($valor_estado == 'PENDIENTES'): ?><i class="bi bi-clock-history"></i>
-           <?php else: ?><i class="bi bi-collection"></i><?php endif; ?>
-           <?= $etiqueta_estado ?>
-           <span class="badge rounded-pill"><?= $tab_counts[$valor_estado] ?? 0 ?></span>
-        </a>
-    <?php endforeach; ?>
+<div class="tabs-section-container">
+    <div class="tabs-section-header">
+        <span class="tabs-section-badge"><i class="bi bi-funnel-fill"></i></span>
+        <span class="tabs-section-title">Filtrar por estado</span>
+        <div class="tabs-section-divider"></div>
+        <span class="tabs-section-meta">
+            <span class="live-dot"></span>
+            <?= number_format($tab_counts['TODAS'] ?? 0) ?> órdenes en total
+        </span>
+    </div>
+    <div class="nav-pills-custom">
+        <?php foreach ($tabs_estado as $valor_estado => $etiqueta_estado): 
+            $qParams = $_GET;
+            $qParams['estado'] = $valor_estado;
+            $qParams['page'] = 1;
+            $url = '?' . http_build_query($qParams);
+            $activeClass = $estado_actual === $valor_estado ? 'active' : '';
+        ?>
+            <a href="<?= $url ?>" class="nav-tab-custom <?= $activeClass ?>" data-estado="<?= $valor_estado ?>">
+               <?php if ($valor_estado == 'URGENTES'): ?><i class="bi bi-exclamation-triangle-fill"></i>
+               <?php elseif ($valor_estado == 'MIS_REPARACIONES'): ?><i class="bi bi-person-workspace"></i>
+               <?php elseif ($valor_estado == 'PEND_REPARACION'): ?><i class="bi bi-inbox"></i>
+               <?php elseif ($valor_estado == 'EN_REPARACION'): ?><i class="bi bi-tools"></i>
+               <?php elseif ($valor_estado == 'REPARADOS'): ?><i class="bi bi-check2-circle"></i>
+               <?php elseif ($valor_estado == 'SIN_REPARACION'): ?><i class="bi bi-x-octagon"></i>
+               <?php elseif ($valor_estado == 'PENDIENTES'): ?><i class="bi bi-clock-history"></i>
+               <?php else: ?><i class="bi bi-collection"></i><?php endif; ?>
+               <?= $etiqueta_estado ?>
+               <span class="badge rounded-pill"><?= $tab_counts[$valor_estado] ?? 0 ?></span>
+            </a>
+        <?php endforeach; ?>
+    </div>
 </div>
 
 <!-- Table Data -->
