@@ -32,6 +32,7 @@ $mes_filtro = $_GET['f_mes'] ?? '';
 $dia_filtro = $_GET['f_dia'] ?? '';
 $diasemana_filtro = $_GET['f_diasemana'] ?? '';
 $solo_urgentes = !empty($_GET['solo_urgentes']);
+$vista_limpia = ($_GET['vista'] ?? '') === 'limpia';
 
 $page = max(1, (int)($_GET['page'] ?? 1));
 $per_page_allowed = [25, 50, 100, 200];
@@ -72,6 +73,20 @@ $dias_semana = ['0'=>'Domingo', '1'=>'Lunes', '2'=>'Martes', '3'=>'Miércoles', 
 function urlSinFiltro($param) {
     $q = $_GET;
     unset($q[$param]);
+    $q['page'] = 1;
+    return '?' . http_build_query($q);
+}
+
+function urlConVistaLimpia() {
+    $q = $_GET;
+    $q['vista'] = 'limpia';
+    $q['page'] = 1;
+    return '?' . http_build_query($q);
+}
+
+function urlSinVistaLimpia() {
+    $q = $_GET;
+    unset($q['vista']);
     $q['page'] = 1;
     return '?' . http_build_query($q);
 }
@@ -155,6 +170,33 @@ if (count($npu_list) > 0) {
         color: var(--text-main);
         margin-bottom: 0;
         letter-spacing: -0.02em;
+    }
+
+    .clean-view-bar {
+        align-items: center;
+        background: #ffffff;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        display: flex;
+        gap: 0.75rem;
+        justify-content: space-between;
+        margin-bottom: 0.55rem;
+        padding: 0.55rem 0.75rem;
+    }
+
+    .clean-view-title {
+        color: var(--text-main);
+        font-size: 14px;
+        font-weight: 800;
+        line-height: 1.15;
+        margin: 0;
+    }
+
+    .clean-view-meta {
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 600;
+        margin-top: 0.12rem;
     }
 
     /* Search & Filter Header */
@@ -641,7 +683,7 @@ if (count($npu_list) > 0) {
         }
 
         .cell-equipo .sala {
-            font-size: 7.3px;
+            font-size: 6.2px;
         }
 
         .ingreso-hora {
@@ -654,7 +696,7 @@ if (count($npu_list) > 0) {
         }
 
         .cell-equipo a {
-            font-size: 7.9px;
+            font-size: 6.8px;
         }
 
         .tech-avatar {
@@ -1392,9 +1434,15 @@ if (count($npu_list) > 0) {
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="page-title">Seguimiento de Equipos</h2>
+    <?php if (!$vista_limpia): ?>
+    <a href="<?= urlConVistaLimpia() ?>" class="btn btn-light border fw-semibold" style="font-size: 12px;">
+        <i class="bi bi-arrows-fullscreen me-1"></i>Vista limpia
+    </a>
+    <?php endif; ?>
 </div>
 
 <!-- Buscador y Filtros -->
+<?php if (!$vista_limpia): ?>
 <div class="dashboard-header">
     <form method="GET" action="index.php" id="searchForm" class="d-flex flex-column gap-2">
         <input type="hidden" name="estado" value="<?= e($estado_actual) ?>">
@@ -1485,8 +1533,19 @@ if (count($npu_list) > 0) {
         </div>
     </form>
 </div>
+<?php else: ?>
+<div class="clean-view-bar">
+    <div>
+        <h3 class="clean-view-title"><?= e($tabs_estado[$estado_actual] ?? 'Reparaciones') ?></h3>
+        <div class="clean-view-meta"><?= number_format($total_registros, 0, ',', '.') ?> reparaciones en esta vista</div>
+    </div>
+    <a href="<?= urlSinVistaLimpia() ?>" class="btn btn-light border fw-semibold" style="font-size: 12px;">
+        <i class="bi bi-arrow-left me-1"></i>Volver al tablero
+    </a>
+</div>
+<?php endif; ?>
 
-<?php if (!empty($active_filters)): ?>
+<?php if (!$vista_limpia && !empty($active_filters)): ?>
 <div class="active-filters">
     <span class="af-label"><i class="bi bi-funnel-fill me-1"></i>Filtros activos:</span>
     <?php foreach ($active_filters as $f): ?>
@@ -1501,7 +1560,7 @@ if (count($npu_list) > 0) {
 </div>
 <?php endif; ?>
 
-<?php if ($is_tecnico): ?>
+<?php if (!$vista_limpia && $is_tecnico): ?>
 <?php
     $totales_tecnico = $mis_pendientes['totales'];
     $items_tecnico = $mis_pendientes['items'];
@@ -1607,6 +1666,7 @@ if (count($npu_list) > 0) {
 <?php endif; ?>
 
 <!-- Nav Tabs (Chips) -->
+<?php if (!$vista_limpia): ?>
 <div class="tabs-section-container">
     <div class="tabs-section-header">
         <span class="tabs-section-badge"><i class="bi bi-funnel-fill"></i></span>
@@ -1620,6 +1680,7 @@ if (count($npu_list) > 0) {
     <div class="nav-pills-custom">
         <?php foreach ($tabs_estado as $valor_estado => $etiqueta_estado): 
             $qParams = $_GET;
+            unset($qParams['vista']);
             $qParams['estado'] = $valor_estado;
             $qParams['page'] = 1;
             $url = '?' . http_build_query($qParams);
@@ -1640,6 +1701,7 @@ if (count($npu_list) > 0) {
         <?php endforeach; ?>
     </div>
 </div>
+<?php endif; ?>
 
 <!-- Table Data -->
 <div class="table-container mb-4">
